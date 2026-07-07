@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Juego de Actividades</title>
+<style>
+
+
+body{margin:0;font-family:Arial,sans-serif;background:#222;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;text-align:center}
+#app{width:90%;max-width:420px}
+h1{font-size:2rem;margin:.3em 0}
+#timer{font-size:4rem;font-weight:bold;margin:.3em 0}
+#round{font-size:1.1rem}
+input,button{font-size:1.2rem;padding:.6em;width:100%;box-sizing:border-box}
+button{margin-top:12px}
+</style>
+</head>
+<body>
+
+<div id="app">
+<div id="setup">
+<h2>¿Cuántas rondas?</h2>
+<input id="rounds" type="number" min="1" value="">
+<button id="start">Comenzar</button>
+</div>
+
+<div id="game" style="display:none">
+<div id="round"></div>
+<h1 id="title"></h1>
+<div id="timer"></div>
+</div>
+</div>
+<script>
+
+let wakeLock = null;
+
+async function mantenerPantallaEncendida(){
+
+    try{
+        wakeLock = await navigator.wakeLock.request("screen");
+        console.log("Pantalla bloqueada para evitar suspensión");
+
+    }catch(e){
+        console.log("No se pudo activar Wake Lock", e);
+    }
+
+}
+
+const actividades=[
+"Latigo","Spank","Fuete","Cachetadas","Agujas en cara",
+"Agujas en Testiculos","Agujas en Pene","Amarrar los testiculos","Tomar Orina","Jalar Verga","Cachetear Verga","Descanso activo"
+];
+
+let total=0,actual=0,estado="actividad",rest=0,intv;
+let lista=[];
+
+function mezclar(a){return [...a].sort(()=>Math.random()-0.5);}
+function beep(n){
+ const c=new(window.AudioContext||window.webkitAudioContext)();
+ let t=c.currentTime;
+ for(let i=0;i<n;i++){
+  const o=c.createOscillator(),g=c.createGain();
+  o.type="sine";o.frequency.value=880;
+  o.connect(g);g.connect(c.destination);
+  g.gain.setValueAtTime(.0001,t);
+  g.gain.exponentialRampToValueAtTime(.3,t+.01);
+  g.gain.exponentialRampToValueAtTime(.0001,t+.25);
+  o.start(t);o.stop(t+.25);t+=.55;
+ }
+}
+
+
+function fmt(s){let m=Math.floor(s/60);let ss=s%60;return String(m).padStart(2,"0")+":"+String(ss).padStart(2,"0")}
+
+
+function siguienteActividad(){
+ if(lista.length===0)lista=mezclar(actividades);
+ actual++;
+ document.getElementById("round").textContent="Ronda "+actual+" de "+total;
+ document.getElementById("title").textContent=lista.pop();
+ rest=(Math.floor(Math.random()*4)+1)*60;
+ estado="actividad";
+ beep(1);
+ document.getElementById("timer").textContent=fmt(rest);
+}
+
+function tick(){
+ rest--;
+ document.getElementById("timer").textContent=fmt(Math.max(rest,0));
+ if(rest>0)return;
+ if(estado==="actividad"){
+   beep(2);
+   if(actual>=total){
+      clearInterval(intv);
+      document.getElementById("title").textContent="¡Juego terminado!";
+      document.getElementById("timer").textContent="";
+      return;
+   }
+   estado="descanso";
+   document.getElementById("title").textContent="Descanso";
+   rest=30;
+ }else{
+   siguienteActividad();
+ }
+}
+
+document.getElementById("start").onclick=async()=>{
+ await mantenerPantallaEncendida();
+ total=parseInt(document.getElementById("rounds").value)||1;
+ document.getElementById("setup").style.display="none";
+ document.getElementById("game").style.display="block";
+ lista=mezclar(actividades);
+ actual=0;
+ siguienteActividad();
+ intv=setInterval(tick,1000);
+};
+</script>
+</body>
+</html>
