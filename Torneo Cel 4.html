@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torneo Interactivo</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 15px;
+  margin: 0;
+  background: #f5f5f5;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+}
+
+button {
+  font-size: 18px;
+  padding: 12px 18px;
+  margin: 8px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+#game {
+  display: none;
+  margin-top: 20px;
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.card {
+  flex: 1 1 250px;
+  font-size: 22px;
+  padding: 20px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  background: white;
+  min-width: 200px;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* HISTORIAL */
+#history {
+  margin-top: 25px;
+  text-align: left;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-item {
+  font-size: 14px;
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+#winner {
+  font-size: 22px;
+  margin-top: 20px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  button {
+    width: 100%;
+    font-size: 16px;
+  }
+
+  .card {
+    font-size: 20px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🔥 Eleccion de Castigo</h2>
+
+<button onclick="start()">Iniciar Juego</button>
+
+<div id="game">
+
+  <div class="cards">
+    <div class="card" id="a">A</div>
+    <div class="card" id="b">B</div>
+  </div>
+
+  <div class="actions">
+    <button onclick="pick('a')">Escoge A</button>
+    <button onclick="pick('b')">Escoge B</button>
+  </div>
+
+  <button onclick="start()">🔄 Reiniciar</button>
+
+  <div id="history">
+    <strong>🧾 Historial de eliminados:</strong>
+    <div id="historyList"></div>
+  </div>
+
+</div>
+
+<h3 id="winner"></h3>
+
+</div>
+
+<script>
+
+/* 🔥 OPCIONES FIJAS */
+const ORIGINAL_LIST = [
+  "latigazos",
+  "spank",
+  "cachetadas",
+  "nalgadas",
+  "fuete",
+  "cachetadas en el pene",
+  "5 agujas en la cara",
+  "10 agujas en la cara",
+  "5 agujas en los testiculos",
+  "10 agujas en los testiculos",
+  "5 agujas en el pene",
+  "10 agujas en el pene",
+  "toques en el culo",
+  "toques en la verga",
+  "toques en el pecho",
+  "cocerte el hocico",
+  "perforarte la oreja",
+  "meter manita en el culo",
+  "coger duro",
+  "coger suave",
+  "te meto el dildo de perro",
+  "te meto el dildo de maiz",
+  "te meto e ldildo de dragon",
+  "te meto las bolas chinas chicas",
+  "te meto las bolas chinas grandes",
+  "toques en las nalgas",
+  "sonda en la verga",
+  "el corte gratis",
+  "sonda de castigo en la verga",
+  "tomar orina",
+  "orina en los ojos",
+  "picarte el culo con los dedos",
+  "meterte mi mano",
+  "abrirte el culo con instrumentos",
+  "poner bolsa en la cabeza",
+  "cogerte fuerte dandote con el latigo",
+  "ahorcarte",
+  "cogerte en cuatro con manos y rodillas",
+  "poner arete atravesando oreja",
+  "cogerte empinado",
+  "agujas en las nalgas",
+  "atravesarte una aguja grande en los testiculos",
+  "atravesarte una aguja grande en la verga",
+  "atravesarte una aguja grande en los labios",
+  "cogerte de perrito hasta que yo termine",
+  "cogerte empinado hasta que yo termine",
+  "cogerte en el columpio hasta que yo termine",
+  "atravesarte las dos orejas con agujas",
+  "atravesarte 5 agujas en las cejas",
+  "atravesarte 10 agujas en las cejas",
+  "meterte y sacarte mi dildo 2 veces",
+  "meterte y sacarte mi dildo 3 veces",
+  "meterte y sacarte las bolas chinas grandes 2 veces",
+  "atravesar una aguja de adentro de la nariz",
+  "atravesar un pezon con aguja grande",
+  "inspeccion anal con guante de latex",
+  "marca con objeto caliente la piel",
+  "poner gengibre en el culo",
+  "atravesar 2 agujas en cada lado del escroto y amarrar",
+  "con cortes marcarte mi M",
+  "meterte y sacarte las bolas chinas grandes 3 veces"
+];
+
+let list = [];
+let currentA = null;
+let currentB = null;
+let round = 1;
+
+function start(){
+
+  list = [...ORIGINAL_LIST]; // reinicia lista
+  document.getElementById("game").style.display = "block";
+  document.getElementById("winner").innerText = "";
+  document.getElementById("historyList").innerHTML = "";
+  round = 1;
+
+  nextRound();
+}
+
+function nextRound(){
+
+  if(list.length === 1){
+    document.getElementById("game").style.display = "none";
+    document.getElementById("winner").innerText =
+      "🏆 Ganador: " + list[0];
+    return;
+  }
+
+  currentA = list.splice(Math.floor(Math.random() * list.length), 1)[0];
+  currentB = list.splice(Math.floor(Math.random() * list.length), 1)[0];
+
+  document.getElementById("a").innerText = "🅰️ " + currentA;
+  document.getElementById("b").innerText = "🅱️ " + currentB;
+}
+
+function pick(choice){
+
+  let eliminated;
+
+  if(choice === "a"){
+    list.push(currentB);
+    eliminated = currentA;
+  } else {
+    list.push(currentA);
+    eliminated = currentB;
+  }
+
+  addHistory(eliminated);
+  round++;
+
+  nextRound();
+}
+
+function addHistory(item){
+  const div = document.createElement("div");
+  div.className = "history-item";
+  div.innerText = "❌ " + item;
+  document.getElementById("historyList").prepend(div);
+}
+
+</script>
+
+</body>
+</html>
