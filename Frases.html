@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reproductor Aleatorio</title>
+
+<style>
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    background:#000;
+    color:#fff;
+    font-family:Arial,Helvetica,sans-serif;
+    overflow:hidden;
+}
+
+#inicio,
+#estado{
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+#estado{
+    display:none;
+    font-size:28px;
+}
+
+button{
+    font-size:30px;
+    padding:20px 50px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="inicio">
+    <button id="btnInicio">INICIAR</button>
+</div>
+
+<div id="estado">
+    Reproduciendo...
+</div>
+
+<audio id="player"></audio>
+
+<script>
+
+//==============================
+// LISTA DE AUDIOS
+//==============================
+
+const audios = [
+    "0017 Acceso.mp3",
+    "0016 Operacion.mp3",
+    "0013 error1.mp3"
+];
+
+//==============================
+
+const player = document.getElementById("player");
+
+let ultimoAudio = -1;
+let wakeLock = null;
+
+//---------------------------------------------
+
+async function pantallaCompleta(){
+
+    try{
+        if(document.documentElement.requestFullscreen){
+            document.documentElement.requestFullscreen();
+        }
+    }catch(e){}
+
+}
+
+//---------------------------------------------
+
+async function mantenerPantallaActiva(){
+
+    if(!("wakeLock" in navigator))
+        return;
+
+    try{
+        wakeLock = await navigator.wakeLock.request("screen");
+    }catch(e){}
+
+}
+
+//---------------------------------------------
+
+document.addEventListener("visibilitychange", async ()=>{
+
+    if(!document.hidden){
+        mantenerPantallaActiva();
+    }
+
+});
+
+//---------------------------------------------
+
+function obtenerAudioAleatorio(){
+
+    if(audios.length===1){
+        ultimoAudio=0;
+        return 0;
+    }
+
+    let indice;
+
+    do{
+        indice=Math.floor(Math.random()*audios.length);
+    }while(indice===ultimoAudio);
+
+    ultimoAudio=indice;
+
+    return indice;
+
+}
+
+//---------------------------------------------
+
+function reproducir(src){
+
+    return new Promise(resolve=>{
+
+        player.src = src;
+
+        player.onended = resolve;
+        player.onerror = resolve;
+
+        player.play().catch(resolve);
+
+    });
+
+}
+
+//---------------------------------------------
+
+function esperar(minutos){
+
+    return new Promise(resolve=>{
+
+        setTimeout(resolve,minutos*60*1000);
+
+    });
+
+}
+
+//---------------------------------------------
+
+async function iniciar(){
+
+    while(true){
+
+        const indice = obtenerAudioAleatorio();
+
+        await reproducir(audios[indice]);
+
+        const pausa = Math.floor(Math.random()*6)+5;
+
+        await esperar(pausa);
+
+    }
+
+}
+
+//---------------------------------------------
+
+document.getElementById("btnInicio").addEventListener("click", ()=>{
+
+    document.getElementById("inicio").style.display="none";
+    document.getElementById("estado").style.display="flex";
+
+    // Se solicitan, pero no se espera a que terminen.
+    pantallaCompleta();
+    mantenerPantallaActiva();
+
+    // Se inicia inmediatamente la reproducción.
+    iniciar();
+
+});
+
+</script>
+
+</body>
+</html>
