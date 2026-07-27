@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Reproductor de Audio</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    background:#f2f2f2;
+}
+
+body{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+#inicio,
+#player{
+    width:100%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    padding:30px;
+}
+
+#inicio{
+    display:none;
+}
+
+#inicio.visible{
+    display:flex;
+}
+
+#player{
+    display:none;
+    cursor:pointer;
+    user-select:none;
+    transition:.25s;
+}
+
+#player.playing{
+    background:#1d3557;
+    color:white;
+}
+
+#player.paused{
+    background:#555;
+    color:white;
+}
+
+h2{
+    margin-bottom:20px;
+    text-align:center;
+}
+
+#lista{
+    width:100%;
+    max-width:500px;
+    max-height:60vh;
+    overflow-y:auto;
+    background:white;
+    border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+
+.item{
+    padding:18px 20px;
+    font-size:20px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+    word-break:break-word;
+}
+
+.item:last-child{
+    border-bottom:none;
+}
+
+.item:hover,
+.item:active{
+    background:#f0f0f0;
+}
+
+button#recargar{
+    margin-top:20px;
+    font-size:18px;
+    padding:10px 24px;
+}
+
+#icono{
+    font-size:120px;
+}
+
+#nombreAudio{
+    margin-top:25px;
+    font-size:24px;
+    text-align:center;
+    word-break:break-word;
+}
+
+#mensaje{
+    margin-top:20px;
+    color:red;
+    text-align:center;
+    min-height:28px;
+}
+
+#info{
+    margin-top:35px;
+    font-size:18px;
+    opacity:.8;
+    text-align:center;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="inicio">
+
+<h2>Selecciona un audio</h2>
+
+<div id="lista"></div>
+
+<div id="mensaje"></div>
+
+<button id="recargar">Actualizar lista</button>
+
+</div>
+
+<div id="player">
+
+<div id="icono">⏸</div>
+
+<div id="nombreAudio"></div>
+
+<div id="info">
+Toca cualquier parte de la pantalla
+<br>
+para Pausar / Reanudar
+</div>
+
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+
+// ======= CONFIGURA AQUÍ TU REPOSITORIO =======
+const USUARIO   = "fredyhb999-dev";
+const REPO      = "Juego-Actividades";
+const CARPETA   = "Frases Accion";
+// ==============================================
+
+const inicio=document.getElementById("inicio");
+const lista=document.getElementById("lista");
+const mensaje=document.getElementById("mensaje");
+const recargar=document.getElementById("recargar");
+const player=document.getElementById("player");
+const audio=document.getElementById("audio");
+const icono=document.getElementById("icono");
+const nombre=document.getElementById("nombreAudio");
+
+let wakeLock=null;
+
+async function mantenerPantalla(){
+
+    try{
+
+        if('wakeLock' in navigator){
+
+            wakeLock=await navigator.wakeLock.request('screen');
+
+            wakeLock.addEventListener("release",()=>{});
+
+        }
+
+    }catch(e){}
+
+}
+
+document.addEventListener("visibilitychange",async()=>{
+
+    if(document.visibilityState==="visible" && wakeLock==null){
+
+        await mantenerPantalla();
+
+    }
+
+});
+
+const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
+
+function esAudio(nombreArchivo){
+
+    const n=nombreArchivo.toLowerCase();
+
+    return extensionesAudio.some(ext=>n.endsWith(ext));
+
+}
+
+function nombreVisible(n){
+
+    const p=n.lastIndexOf(".");
+
+    return p>0 ? n.substring(0,p) : n;
+
+}
+
+async function cargarLista(){
+
+    lista.innerHTML="";
+    mensaje.textContent="Cargando lista...";
+
+    try{
+
+        const url="https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+encodeURIComponent(CARPETA);
+
+        const res=await fetch(url);
+
+        if(!res.ok){
+
+            throw new Error("No se pudo leer la carpeta");
+
+        }
+
+        const datos=await res.json();
+
+        const audios=datos.filter(item=>item.type==="file" && esAudio(item.name));
+
+        if(audios.length===0){
+
+            mensaje.textContent="No hay archivos de audio en la carpeta.";
+
+            return;
+
+        }
+
+        mensaje.textContent="";
+
+        audios.sort((a,b)=>a.name.localeCompare(b.name,"es"));
+
+        audios.forEach(item=>{
+
+            const div=document.createElement("div");
+
+            div.className="item";
+            div.textContent=nombreVisible(item.name);
+
+            div.onclick=()=>reproducir(item.download_url,nombreVisible(item.name));
+
+            lista.appendChild(div);
+
+        });
+
+    }catch(e){
+
+        mensaje.textContent="Error al cargar la lista. Revisa tu conexión.";
+
+    }
+
+}
+
+async function reproducir(url,nombreMostrar){
+
+    mensaje.textContent="";
+
+    await mantenerPantalla();
+
+    audio.pause();
+
+    audio.src=url;
+
+    audio.load();
+
+    audio.play()
+    .then(()=>{
+
+        inicio.classList.remove("visible");
+
+        player.style.display="flex";
+
+        player.className="playing";
+
+        icono.textContent="⏸";
+
+        nombre.textContent=nombreMostrar;
+
+    })
+    .catch(()=>{
+
+        mensaje.textContent="No se pudo reproducir el audio.";
+
+    });
+
+}
+
+player.onclick=()=>{
+
+    if(audio.paused){
+
+        audio.play();
+
+        player.className="playing";
+
+        icono.textContent="⏸";
+
+    }else{
+
+        audio.pause();
+
+        player.className="paused";
+
+        icono.textContent="▶";
+
+    }
+
+};
+
+function volverAlInicio(){
+
+    inicio.classList.add("visible");
+
+    player.style.display="none";
+
+    cargarLista();
+
+}
+
+audio.onended=volverAlInicio;
+
+audio.onerror=()=>{
+
+    inicio.classList.add("visible");
+
+    player.style.display="none";
+
+    mensaje.textContent="No se encontró el archivo.";
+
+    cargarLista();
+
+};
+
+recargar.onclick=cargarLista;
+
+cargarLista();
+inicio.classList.add("visible");
+
+</script>
+
+</body>
+</html>
