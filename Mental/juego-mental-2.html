@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Juego Mental 2</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%; width:100%;
+    overflow:hidden; color:var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    user-select:none;
+  }
+
+  /* ---------- pantalla de selección ---------- */
+  #seleccion{
+    height:100dvh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center;
+    padding: max(28px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    overflow-y:auto;
+  }
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.78rem; letter-spacing:.35em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:10px;
+  }
+  #seleccion h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.8rem; margin:0 0 6px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #seleccion p.desc{
+    font-size:.88rem; color:var(--fg-muted); text-align:center;
+    max-width:340px; margin:0 0 26px;
+  }
+  #listaCarpetas{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .folder-item{
+    display:flex; align-items:center; gap:14px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius:14px;
+    padding:15px 16px;
+    cursor:pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .folder-item.selected{
+    border-color: var(--teal);
+    background: color-mix(in srgb, var(--teal) 10%, var(--card));
+  }
+  .checkbox{
+    flex:0 0 auto;
+    width:24px; height:24px;
+    border-radius:7px;
+    border: 2px solid var(--fg-muted);
+    display:flex; align-items:center; justify-content:center;
+    font-size:.9rem;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .folder-item.selected .checkbox{
+    border-color: var(--teal);
+    background: var(--teal);
+    color: var(--bg);
+  }
+  .folder-name{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600; font-size:1.02rem;
+  }
+
+  #btnIniciarSel{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; letter-spacing:.06em; font-size:1.05rem;
+    width:100%; max-width:440px;
+    margin-top:22px;
+    padding:16px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none; border-radius:14px;
+    cursor:pointer;
+    transition: transform .15s ease, opacity .2s ease;
+  }
+  #btnIniciarSel:active{ transform: scale(.97); }
+  #btnIniciarSel:disabled{ opacity:.4; cursor:default; }
+
+  #selMsg{
+    margin-top:14px;
+    font-size:.85rem;
+    color: var(--coral);
+    min-height:18px;
+    text-align:center;
+  }
+  #selMsg.info{ color: var(--fg-muted); }
+
+  .btn-secundario{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600; letter-spacing:.05em; font-size:.95rem;
+    margin-top:14px;
+    padding:12px 26px;
+    color: var(--fg);
+    background: transparent;
+    border: 1px solid var(--card-border);
+    border-radius:12px;
+    cursor:pointer;
+  }
+  .btn-secundario:active{ transform: scale(.97); }
+
+  /* ---------- pantalla de reproducción (igual que juego-mental) ---------- */
+  #screen{
+    display:none;
+    height:100dvh; width:100vw;
+    flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    transition: background-color .4s ease, box-shadow .4s ease;
+    cursor:pointer;
+  }
+  #screen.playing{ box-shadow: inset 0 0 140px var(--teal-glow); }
+  #screen.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
+  #screen.error{ box-shadow: inset 0 0 140px var(--coral-glow); background: radial-gradient(circle at 50% 0%, #351421, var(--bg)); }
+
+  #titulo{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; letter-spacing:.35em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:14px;
+  }
+  #fase{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:2rem; margin-bottom:8px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #estado{ font-size:1.1rem; margin-bottom:28px; min-height:1.6em; color: var(--fg-muted); }
+  #contador{ font-family:'Chakra Petch', sans-serif; font-size:3.6rem; font-weight:700; letter-spacing:1px; font-variant-numeric: tabular-nums; }
+  #detalle{ font-size:1rem; opacity:.7; margin-top:10px; }
+  #progreso{ margin-top:28px; font-size:.85rem; letter-spacing:.05em; color: var(--fg-muted); }
+  #barra-wrap{ width:80%; max-width:420px; height:6px; background:var(--card-border); border-radius:4px; margin-top:14px; overflow:hidden; }
+  #barra{ height:100%; width:0%; background: linear-gradient(90deg, var(--coral), var(--teal)); transition:width .3s ease; }
+  #hint{ position:absolute; bottom:max(26px, env(safe-area-inset-bottom)); font-size:.8rem; color: var(--fg-muted); opacity:.7; }
+</style>
+</head>
+<body>
+
+<div id="seleccion">
+  <p class="eyebrow">Mental 2</p>
+  <h1>Elige las carpetas</h1>
+  <p class="desc">Selecciona una o más carpetas. Se reproducirán todos los audios que contengan, en orden aleatorio, con 20 segundos entre cada frase.</p>
+  <div id="listaCarpetas"></div>
+  <button id="btnIniciarSel" disabled>Iniciar</button>
+  <div id="selMsg" class="info">Cargando carpetas...</div>
+  <button id="btnReintentarSel" class="btn-secundario" style="display:none;">Reintentar</button>
+</div>
+
+<div id="screen">
+  <div id="titulo">Mental 2</div>
+  <div id="fase">Toca la pantalla</div>
+  <div id="estado">para comenzar</div>
+  <div id="contador"></div>
+  <div id="detalle"></div>
+  <div id="barra-wrap"><div id="barra"></div></div>
+  <div id="progreso"></div>
+  <div id="hint">Toca en cualquier momento para pausar / continuar</div>
+</div>
+
+<audio id="audioEl" playsinline></audio>
+
+<script>
+(function(){
+  "use strict";
+
+  // ====== CONFIGURACIÓN ======
+  const OWNER = "fredyhb999-dev";
+  const REPO = "Juego-Actividades";
+  const BRANCH = "main";
+  const BASE_FOLDER = "Mental";
+  // ============================
+  const ESPERA_MS = 20 * 1000; // 20 segundos entre cada frase
+  const btnReintentarSel = document.getElementById("btnReintentarSel");
+  let FOLDERS = []; // se llena dinámicamente consultando el repositorio
+
+  const seleccionEl   = document.getElementById("seleccion");
+  const listaCarpetasEl = document.getElementById("listaCarpetas");
+  const btnIniciarSel = document.getElementById("btnIniciarSel");
+  const selMsgEl       = document.getElementById("selMsg");
+
+  const screenEl   = document.getElementById("screen");
+  const faseEl     = document.getElementById("fase");
+  const estadoEl   = document.getElementById("estado");
+  const contadorEl = document.getElementById("contador");
+  const detalleEl  = document.getElementById("detalle");
+  const progresoEl = document.getElementById("progreso");
+  const barraEl    = document.getElementById("barra");
+  const hintEl     = document.getElementById("hint");
+  const audioEl    = document.getElementById("audioEl");
+
+  const state = {
+    running: false,
+    paused: false,
+    stopRequested: false,
+    playingAudio: false,
+    finished: false
+  };
+
+  let wakeLock = null;
+  let seleccionadas = new Set();
+
+  // ---------- Descubrir subcarpetas reales dentro de Mental ----------
+  async function listSubfolders(){
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(BASE_FOLDER)}?ref=${BRANCH}`;
+    const res = await fetch(url, { headers: { "Accept": "application/vnd.github.v3+json" } });
+    if(!res.ok){
+      throw new Error(`No se pudo leer la carpeta "${BASE_FOLDER}" (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    if(!Array.isArray(data)){
+      throw new Error(`"${BASE_FOLDER}" no tiene contenido válido`);
+    }
+    const nombres = data.filter(item => item.type === "dir").map(item => item.name);
+    const collator = new Intl.Collator("es", { numeric: true, sensitivity: "base" });
+    nombres.sort(collator.compare);
+    return nombres;
+  }
+
+  function construirListaSeleccion(){
+    listaCarpetasEl.innerHTML = "";
+    seleccionadas = new Set();
+    btnIniciarSel.disabled = true;
+    FOLDERS.forEach(folderName=>{
+      const item = document.createElement("div");
+      item.className = "folder-item";
+      item.innerHTML = `<div class="checkbox">✓</div><div class="folder-name">${folderName}</div>`;
+      item.addEventListener("click", ()=>{
+        if(seleccionadas.has(folderName)){
+          seleccionadas.delete(folderName);
+          item.classList.remove("selected");
+        }else{
+          seleccionadas.add(folderName);
+          item.classList.add("selected");
+        }
+        btnIniciarSel.disabled = seleccionadas.size === 0;
+      });
+      listaCarpetasEl.appendChild(item);
+    });
+  }
+
+  async function cargarCarpetas(){
+    selMsgEl.className = "info";
+    selMsgEl.textContent = "Cargando carpetas...";
+    btnReintentarSel.style.display = "none";
+    btnIniciarSel.disabled = true;
+    listaCarpetasEl.innerHTML = "";
+    try{
+      FOLDERS = await listSubfolders();
+      if(FOLDERS.length === 0){
+        selMsgEl.className = "";
+        selMsgEl.textContent = `No se encontraron subcarpetas dentro de "${BASE_FOLDER}".`;
+        btnReintentarSel.style.display = "inline-block";
+        return;
+      }
+      construirListaSeleccion();
+      selMsgEl.textContent = "";
+    }catch(e){
+      selMsgEl.className = "";
+      selMsgEl.textContent = "No se pudo cargar la lista de carpetas. Revisa tu conexión.";
+      btnReintentarSel.style.display = "inline-block";
+    }
+  }
+
+  btnReintentarSel.addEventListener("click", cargarCarpetas);
+  cargarCarpetas();
+
+  // ---------- Wake Lock ----------
+  async function requestWakeLock(){
+    try{
+      if("wakeLock" in navigator){
+        wakeLock = await navigator.wakeLock.request("screen");
+      }
+    }catch(e){
+      console.warn("No se pudo activar Wake Lock:", e);
+    }
+  }
+  function releaseWakeLock(){
+    if(wakeLock){
+      wakeLock.release().catch(()=>{});
+      wakeLock = null;
+    }
+  }
+  document.addEventListener("visibilitychange", async ()=>{
+    if(document.visibilityState === "visible" && state.running && !state.paused){
+      await requestWakeLock();
+    }
+  });
+
+  // ---------- Utilidades ----------
+  function shuffle(arr){
+    const copy = arr.slice();
+    for(let i=copy.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [copy[i],copy[j]] = [copy[j],copy[i]];
+    }
+    return copy;
+  }
+
+  function fmtTime(ms){
+    const totalSec = Math.max(0, Math.ceil(ms/1000));
+    const m = Math.floor(totalSec/60);
+    const s = totalSec % 60;
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  }
+
+  async function listMp3(folderName){
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(BASE_FOLDER)}/${encodeURIComponent(folderName)}?ref=${BRANCH}`;
+    const res = await fetch(url, { headers: { "Accept": "application/vnd.github.v3+json" } });
+    if(res.status === 404){
+      // Carpeta sin archivos (git no rastrea carpetas vacías)
+      return [];
+    }
+    if(!res.ok){
+      throw new Error(`No se pudo leer la carpeta "${folderName}" (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    if(!Array.isArray(data)){
+      return [];
+    }
+    return data
+      .filter(f => f.type === "file" && f.name.toLowerCase().endsWith(".mp3"))
+      .map(f => ({ name: f.name, rawUrl: f.download_url }));
+  }
+
+  // ---------- UI ----------
+  function setScreenClass(cls){
+    screenEl.classList.remove("playing","paused","error");
+    if(cls) screenEl.classList.add(cls);
+  }
+
+  function updateProgreso(folderIdx, phraseIdx, phraseTotal, totalFolders){
+    progresoEl.textContent = `Carpeta ${folderIdx+1} / ${totalFolders}`;
+    const pct = ((folderIdx + (phraseIdx/phraseTotal)) / totalFolders) * 100;
+    barraEl.style.width = Math.min(100, Math.max(0,pct)) + "%";
+  }
+
+  // ---------- Espera cancelable / pausable ----------
+  function wait(ms){
+    return new Promise((resolve)=>{
+      let remaining = ms;
+      state.playingAudio = false;
+      const tick = ()=>{
+        if(state.stopRequested){ resolve(); return; }
+        if(!state.paused){
+          remaining -= 200;
+          contadorEl.textContent = fmtTime(remaining);
+        }
+        if(remaining <= 0){ resolve(); return; }
+        state._waitTimer = setTimeout(tick, 200);
+      };
+      tick();
+    });
+  }
+
+  // ---------- Reproducción de audio pausable ----------
+  function playAudioFile(url){
+    return new Promise((resolve, reject)=>{
+      state.playingAudio = true;
+      audioEl.src = url;
+      audioEl.currentTime = 0;
+
+      const onEnded = ()=>{ cleanup(); resolve(); };
+      const onError = ()=>{ cleanup(); reject(new Error("Error al reproducir el audio")); };
+      function cleanup(){
+        audioEl.removeEventListener("ended", onEnded);
+        audioEl.removeEventListener("error", onError);
+      }
+      audioEl.addEventListener("ended", onEnded);
+      audioEl.addEventListener("error", onError);
+
+      if(state.stopRequested){ cleanup(); resolve(); return; }
+
+      if(!state.paused){
+        audioEl.play().catch((e)=>{ cleanup(); reject(e); });
+      }
+    });
+  }
+
+  // ---------- Secuencia principal ----------
+  async function runGame(carpetasElegidas){
+    estadoEl.textContent = "Preparando carpetas...";
+    const plan = [];
+    for(let fi=0; fi<carpetasElegidas.length; fi++){
+      if(state.stopRequested) return;
+      const folderName = carpetasElegidas[fi];
+      let files;
+      try{
+        files = await listMp3(folderName);
+      }catch(e){
+        showError(`Error leyendo "${folderName}": ${e.message}`);
+        return;
+      }
+      if(files.length === 0){
+        continue; // carpeta sin audios: se omite
+      }
+      const seleccion = shuffle(files);
+      plan.push({ folderName, seleccion });
+    }
+
+    if(plan.length === 0){
+      showError("Las carpetas elegidas no tienen archivos .mp3");
+      return;
+    }
+
+    for(let fi=0; fi<plan.length; fi++){
+      if(state.stopRequested) break;
+      const { folderName, seleccion } = plan[fi];
+
+      faseEl.textContent = folderName;
+      updateProgreso(fi, 0, seleccion.length, plan.length);
+
+      for(let pi=0; pi<seleccion.length; pi++){
+        if(state.stopRequested) break;
+        const item = seleccion[pi];
+
+        estadoEl.textContent = `Reproduciendo frase ${pi+1} de ${seleccion.length}`;
+        detalleEl.textContent = item.name;
+        contadorEl.textContent = "";
+        updateProgreso(fi, pi, seleccion.length, plan.length);
+
+        try{
+          await playAudioFile(item.rawUrl);
+        }catch(e){
+          showError(`No se pudo reproducir "${item.name}"`);
+          return;
+        }
+
+        if(state.stopRequested) break;
+
+        const esUltimaFraseGlobal = (fi === plan.length-1) && (pi === seleccion.length-1);
+        if(!esUltimaFraseGlobal){
+          estadoEl.textContent = "Siguiente frase en...";
+          await wait(ESPERA_MS);
+        }
+      }
+    }
+
+    if(!state.stopRequested){
+      finishGame();
+    }
+  }
+
+  function showError(msg){
+    setScreenClass("error");
+    faseEl.textContent = "Error";
+    estadoEl.textContent = msg;
+    contadorEl.textContent = "";
+    detalleEl.textContent = "Toca para reiniciar";
+    hintEl.textContent = "";
+    state.running = false;
+    state.paused = false;
+    state.finished = true;
+    releaseWakeLock();
+  }
+
+  function finishGame(){
+    setScreenClass("");
+    faseEl.textContent = "Juego terminado";
+    estadoEl.textContent = "Todas las carpetas fueron reproducidas";
+    contadorEl.textContent = "✓";
+    detalleEl.textContent = "";
+    progresoEl.textContent = "";
+    barraEl.style.width = "100%";
+    hintEl.textContent = "Toca para volver a empezar";
+    state.running = false;
+    state.paused = false;
+    state.finished = true;
+    releaseWakeLock();
+  }
+
+  // ---------- Control de inicio / pausa ----------
+  async function startGame(carpetasElegidas){
+    state.running = true;
+    state.paused = false;
+    state.stopRequested = false;
+    state.finished = false;
+    setScreenClass("playing");
+    hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
+    await requestWakeLock();
+    runGame(carpetasElegidas);
+  }
+
+  function togglePause(){
+    state.paused = !state.paused;
+    if(state.paused){
+      setScreenClass("paused");
+      if(state.playingAudio && !audioEl.paused){
+        audioEl.pause();
+      }
+    }else{
+      setScreenClass("playing");
+      if(state.playingAudio && audioEl.paused){
+        audioEl.play().catch(()=>{});
+      }
+      requestWakeLock();
+    }
+  }
+
+  function volverASeleccion(){
+    state.running = false;
+    state.paused = false;
+    state.stopRequested = false;
+    state.finished = false;
+    setScreenClass("");
+    faseEl.textContent = "Toca la pantalla";
+    estadoEl.textContent = "para comenzar";
+    contadorEl.textContent = "";
+    detalleEl.textContent = "";
+    progresoEl.textContent = "";
+    barraEl.style.width = "0%";
+    hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
+    screenEl.style.display = "none";
+    seleccionEl.style.display = "flex";
+  }
+
+  screenEl.addEventListener("click", ()=>{
+    if(state.finished){
+      volverASeleccion();
+    }else if(state.running){
+      togglePause();
+    }
+  });
+
+  btnIniciarSel.addEventListener("click", ()=>{
+    if(seleccionadas.size === 0) return;
+    selMsgEl.textContent = "";
+    const carpetasElegidas = FOLDERS.filter(f => seleccionadas.has(f)); // respeta el orden original
+    seleccionEl.style.display = "none";
+    screenEl.style.display = "flex";
+    startGame(carpetasElegidas);
+  });
+
+})();
+</script>
+</body>
+</html>
