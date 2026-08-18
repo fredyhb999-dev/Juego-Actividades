@@ -159,12 +159,19 @@
   async function listMp3(folderName){
     const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(BASE_FOLDER)}/${encodeURIComponent(folderName)}?ref=${BRANCH}`;
     const res = await fetch(url, { headers: { "Accept": "application/vnd.github.v3+json" } });
+    if(res.status === 404){
+      // En git las carpetas vacías no existen como tal, así que GitHub
+      // responde 404 cuando no hay ningún archivo dentro. Lo tratamos
+      // como "carpeta vacía" en vez de un error real.
+      return [];
+    }
     if(!res.ok){
       throw new Error(`No se pudo leer la carpeta "${folderName}" (HTTP ${res.status})`);
     }
     const data = await res.json();
     if(!Array.isArray(data)){
-      throw new Error(`La carpeta "${folderName}" no tiene contenido válido`);
+      // Puede pasar si la "carpeta" en realidad es un solo archivo u otro caso raro
+      return [];
     }
     return data
       .filter(f => f.type === "file" && f.name.toLowerCase().endsWith(".mp3"))
