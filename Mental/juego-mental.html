@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Juego Mental</title>
+<style>
+  :root{
+    --bg: #0f172a;
+    --bg-playing: #14532d;
+    --bg-paused: #7c2d12;
+    --bg-error: #7f1d1d;
+    --fg: #f8fafc;
+    --accent: #38bdf8;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%; width:100%;
+    overflow:hidden; background:var(--bg); color:var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    user-select:none;
+  }
+  #screen{
+    height:100dvh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    transition: background-color .4s ease;
+    cursor:pointer;
+  }
+  #screen.playing{ background:var(--bg-playing); }
+  #screen.paused{ background:var(--bg-paused); }
+  #screen.error{ background:var(--bg-error); }
+
+  #titulo{ font-size:1.5rem; opacity:.75; margin-bottom:8px; letter-spacing:.5px; }
+  #fase{ font-size:2.2rem; font-weight:700; margin-bottom:6px; }
+  #estado{ font-size:1.3rem; margin-bottom:28px; min-height:1.6em; }
+  #contador{ font-size:4rem; font-weight:800; letter-spacing:1px; font-variant-numeric: tabular-nums; }
+  #detalle{ font-size:1rem; opacity:.7; margin-top:10px; }
+  #progreso{ margin-top:28px; font-size:1rem; opacity:.6; }
+  #barra-wrap{ width:80%; max-width:420px; height:8px; background:rgba(255,255,255,.15); border-radius:4px; margin-top:14px; overflow:hidden; }
+  #barra{ height:100%; width:0%; background:var(--accent); transition:width .3s ease; }
+  #hint{ position:absolute; bottom:26px; font-size:.85rem; opacity:.5; }
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <div id="titulo">JUEGO MENTAL</div>
+  <div id="fase">Toca la pantalla</div>
+  <div id="estado">para comenzar</div>
+  <div id="contador"></div>
+  <div id="detalle"></div>
+  <div id="barra-wrap"><div id="barra"></div></div>
+  <div id="progreso"></div>
+  <div id="hint">Toca en cualquier momento para pausar / continuar</div>
+</div>
+
+<audio id="audioEl" playsinline></audio>
+
+<script>
+(function(){
+  "use strict";
+
+  // ====== CONFIGURACIÓN ======
+  const OWNER = "fredyhb999-dev";
+  const REPO = "Juego-Actividades";
+  const BRANCH = "main";
+  const BASE_FOLDER = "Mental";
+  const FOLDERS = ["Fase 1a","Fase 1b","Fase 2a","Fase 2b","Fase 3a","Fase 3b","Fase 4a","Fase 4b","Especial"];
+  const FRASES_POR_CARPETA = 7;
+  const ESPERA_FRASE_MS = 1 * 60 * 1000;   // 1 minuto entre frases de la misma carpeta
+  const ESPERA_CARPETA_MS = 2 * 60 * 1000; // 2 minutos al cambiar de carpeta
+  // ============================
+
+  const screenEl   = document.getElementById("screen");
+  const faseEl     = document.getElementById("fase");
+  const estadoEl   = document.getElementById("estado");
+  const contadorEl = document.getElementById("contador");
+  const detalleEl  = document.getElementById("detalle");
+  const progresoEl = document.getElementById("progreso");
+  const barraEl    = document.getElementById("barra");
+  const hintEl     = document.getElementById("hint");
+  const audioEl    = document.getElementById("audioEl");
+
+  const state = {
+    running: false,
+    paused: false,
+    stopRequested: false,
+    playingAudio: false,   // true si el estado actual es "reproduciendo audio"
+    finished: false
+  };
+
+  let wakeLock = null;
+
+  // ---------- Wake Lock ----------
+  async function requestWakeLock(){
+    try{
+      if("wakeLock" in navigator){
+        wakeLock = await navigator.wakeLock.request("screen");
+      }
+    }catch(e){
+      console.warn("No se pudo activar Wake Lock:", e);
+    }
+  }
+  function releaseWakeLock(){
+    if(wakeLock){
+      wakeLock.release().catch(()=>{});
+      wakeLock = null;
+    }
+  }
+  document.addEventListener("visibilitychange", async ()=>{
+    if(document.visibilityState === "visible" && state.running && !state.paused){
+      await requestWakeLock();
+    }
+  });
+
+  // ---------- Utilidades ----------
+  function pickRandom(arr, n){
+    const copy = arr.slice();
+    const result = [];
+    const total = Math.min(n, copy.length);
+    for(let i=0;i<total;i++){
+      const idx = Math.floor(Math.random()*copy.length);
+      result.push(copy.splice(idx,1)[0]);
+    }
+    return result;
+  }
+
+  function fmtTime(ms){
+    const totalSec = Math.max(0, Math.ceil(ms/1000));
+    const m = Math.floor(totalSec/60);
+    const s = totalSec % 60;
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  }
+
+  async function listMp3(folderName){
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(BASE_FOLDER)}/${encodeURIComponent(folderName)}?ref=${BRANCH}`;
+    const res = await fetch(url, { headers: { "Accept": "application/vnd.github.v3+json" } });
+    if(!res.ok){
+      throw new Error(`No se pudo leer la carpeta "${folderName}" (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    if(!Array.isArray(data)){
+      throw new Error(`La carpeta "${folderName}" no tiene contenido válido`);
+    }
+    return data
+      .filter(f => f.type === "file" && f.name.toLowerCase().endsWith(".mp3"))
+      .map(f => ({ name: f.name, rawUrl: f.download_url }));
+  }
+
+  // ---------- UI ----------
+  function setScreenClass(cls){
+    screenEl.classList.remove("playing","paused","error");
+    if(cls) screenEl.classList.add(cls);
+  }
+
+  function updateProgreso(folderIdx, phraseIdx, phraseTotal){
+    progresoEl.textContent = `Carpeta ${folderIdx+1} / ${FOLDERS.length}`;
+    const pct = ((folderIdx + (phraseIdx/phraseTotal)) / FOLDERS.length) * 100;
+    barraEl.style.width = Math.min(100, Math.max(0,pct)) + "%";
+  }
+
+  // ---------- Espera cancelable / pausable ----------
+  function wait(ms){
+    return new Promise((resolve)=>{
+      let remaining = ms;
+      state.playingAudio = false;
+      const tick = ()=>{
+        if(state.stopRequested){ resolve(); return; }
+        if(!state.paused){
+          remaining -= 200;
+          contadorEl.textContent = fmtTime(remaining);
+        }
+        if(remaining <= 0){ resolve(); return; }
+        state._waitTimer = setTimeout(tick, 200);
+      };
+      tick();
+    });
+  }
+
+  // ---------- Reproducción de audio pausable ----------
+  function playAudioFile(url){
+    return new Promise((resolve, reject)=>{
+      state.playingAudio = true;
+      audioEl.src = url;
+      audioEl.currentTime = 0;
+
+      const onEnded = ()=>{ cleanup(); resolve(); };
+      const onError = ()=>{ cleanup(); reject(new Error("Error al reproducir el audio")); };
+      function cleanup(){
+        audioEl.removeEventListener("ended", onEnded);
+        audioEl.removeEventListener("error", onError);
+      }
+      audioEl.addEventListener("ended", onEnded);
+      audioEl.addEventListener("error", onError);
+
+      if(state.stopRequested){ cleanup(); resolve(); return; }
+
+      if(!state.paused){
+        audioEl.play().catch((e)=>{ cleanup(); reject(e); });
+      }
+      // si está pausado justo al llegar aquí, togglePause() se encargará de darle play
+    });
+  }
+
+  // ---------- Secuencia principal ----------
+  async function runGame(){
+    for(let fi=0; fi<FOLDERS.length; fi++){
+      if(state.stopRequested) break;
+      const folderName = FOLDERS[fi];
+
+      faseEl.textContent = folderName;
+      estadoEl.textContent = "Cargando frases...";
+      contadorEl.textContent = "";
+      detalleEl.textContent = "";
+      updateProgreso(fi, 0, FRASES_POR_CARPETA);
+
+      let files;
+      try{
+        files = await listMp3(folderName);
+      }catch(e){
+        showError(`Error leyendo "${folderName}": ${e.message}`);
+        return;
+      }
+
+      if(files.length === 0){
+        showError(`La carpeta "${folderName}" no tiene archivos .mp3`);
+        return;
+      }
+
+      const seleccion = pickRandom(files, FRASES_POR_CARPETA);
+
+      for(let pi=0; pi<seleccion.length; pi++){
+        if(state.stopRequested) break;
+        const item = seleccion[pi];
+
+        estadoEl.textContent = `Reproduciendo frase ${pi+1} de ${seleccion.length}`;
+        detalleEl.textContent = item.name;
+        contadorEl.textContent = "";
+        updateProgreso(fi, pi, seleccion.length);
+
+        try{
+          await playAudioFile(item.rawUrl);
+        }catch(e){
+          showError(`No se pudo reproducir "${item.name}"`);
+          return;
+        }
+
+        if(state.stopRequested) break;
+
+        const esUltimaFraseGlobal = (fi === FOLDERS.length-1) && (pi === seleccion.length-1);
+        const esUltimaFraseDeCarpeta = (pi === seleccion.length-1);
+
+        if(!esUltimaFraseGlobal){
+          if(esUltimaFraseDeCarpeta){
+            estadoEl.textContent = "Cambiando de carpeta en...";
+            await wait(ESPERA_CARPETA_MS);
+          }else{
+            estadoEl.textContent = "Siguiente frase en...";
+            await wait(ESPERA_FRASE_MS);
+          }
+        }
+      }
+    }
+
+    if(!state.stopRequested){
+      finishGame();
+    }
+  }
+
+  function showError(msg){
+    setScreenClass("error");
+    faseEl.textContent = "Error";
+    estadoEl.textContent = msg;
+    contadorEl.textContent = "";
+    detalleEl.textContent = "Toca para reiniciar";
+    hintEl.textContent = "";
+    state.running = false;
+    state.paused = false;
+    state.finished = true;
+    releaseWakeLock();
+  }
+
+  function finishGame(){
+    setScreenClass("");
+    faseEl.textContent = "Juego terminado";
+    estadoEl.textContent = "Todas las carpetas fueron reproducidas";
+    contadorEl.textContent = "✓";
+    detalleEl.textContent = "";
+    progresoEl.textContent = "";
+    barraEl.style.width = "100%";
+    hintEl.textContent = "Toca para volver a empezar";
+    state.running = false;
+    state.paused = false;
+    state.finished = true;
+    releaseWakeLock();
+  }
+
+  // ---------- Control de inicio / pausa ----------
+  async function startGame(){
+    state.running = true;
+    state.paused = false;
+    state.stopRequested = false;
+    state.finished = false;
+    setScreenClass("playing");
+    hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
+    await requestWakeLock();
+    runGame();
+  }
+
+  function togglePause(){
+    state.paused = !state.paused;
+    if(state.paused){
+      setScreenClass("paused");
+      estadoEl.dataset.prev = estadoEl.textContent;
+      if(state.playingAudio && !audioEl.paused){
+        audioEl.pause();
+      }
+    }else{
+      setScreenClass("playing");
+      if(state.playingAudio && audioEl.paused){
+        audioEl.play().catch(()=>{});
+      }
+      requestWakeLock();
+    }
+  }
+
+  function resetToIdle(){
+    state.running = false;
+    state.paused = false;
+    state.stopRequested = false;
+    state.finished = false;
+    setScreenClass("");
+    faseEl.textContent = "Toca la pantalla";
+    estadoEl.textContent = "para comenzar";
+    contadorEl.textContent = "";
+    detalleEl.textContent = "";
+    progresoEl.textContent = "";
+    barraEl.style.width = "0%";
+    hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
+  }
+
+  screenEl.addEventListener("click", ()=>{
+    if(!state.running && !state.finished){
+      startGame();
+    }else if(state.finished){
+      resetToIdle();
+    }else{
+      togglePause();
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
