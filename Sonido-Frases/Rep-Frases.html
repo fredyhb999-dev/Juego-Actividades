@@ -2,23 +2,45 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <title>Reproductor de Audio</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
+
+:root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+}
 
 *{
     box-sizing:border-box;
     margin:0;
     padding:0;
-    font-family:Arial,Helvetica,sans-serif;
+    font-family:'Inter', system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
 }
 
 html,body{
     width:100%;
     height:100%;
-    background:#f2f2f2;
+    background:
+        radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+        radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+        var(--bg);
+    color: var(--fg);
 }
 
 body{
@@ -35,63 +57,112 @@ body{
     flex-direction:column;
     justify-content:center;
     align-items:center;
-    padding:30px;
+    padding: max(30px, env(safe-area-inset-top)) 24px max(30px, env(safe-area-inset-bottom));
 }
 
 #player{
     display:none;
     cursor:pointer;
     user-select:none;
-    transition:.25s;
+    transition: box-shadow .3s ease;
 }
 
 #player.playing{
-    background:#1d3557;
-    color:white;
+    box-shadow: inset 0 0 160px var(--teal-glow);
 }
 
 #player.paused{
-    background:#555;
-    color:white;
+    box-shadow: inset 0 0 160px var(--coral-glow);
+}
+
+.eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size: .78rem;
+    letter-spacing: .35em;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+h2{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing:.02em;
+    text-align:center;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 input{
     width:100%;
-    max-width:400px;
-    font-size:22px;
-    padding:14px;
-    margin-top:20px;
+    max-width:380px;
+    font-family:'Inter', sans-serif;
+    font-size:1.15rem;
+    padding:16px 18px;
+    margin-top:26px;
     margin-bottom:20px;
     text-align:center;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius:12px;
+    color: var(--fg);
+    outline:none;
 }
 
-button{
-    font-size:22px;
-    padding:14px 30px;
+input::placeholder{
+    color: var(--fg-muted);
+}
+
+input:focus{
+    border-color: var(--teal);
+}
+
+button#reproducir{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600;
+    letter-spacing:.05em;
+    font-size:1.05rem;
+    padding:15px 34px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    transition: transform .15s ease;
+}
+
+button#reproducir:active{
+    transform: scale(.96);
 }
 
 #icono{
-    font-size:120px;
+    font-size:5.5rem;
 }
 
 #nombreAudio{
-    margin-top:25px;
-    font-size:24px;
+    margin-top:26px;
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600;
+    font-size:1.3rem;
     text-align:center;
     word-break:break-word;
 }
 
 #mensaje{
     margin-top:20px;
-    color:red;
+    color: var(--coral);
     text-align:center;
-    min-height:28px;
+    min-height:24px;
+    font-size:.9rem;
 }
 
 #info{
-    margin-top:35px;
-    font-size:18px;
-    opacity:.8;
+    margin-top:36px;
+    font-size:.85rem;
+    color: var(--fg-muted);
     text-align:center;
 }
 
@@ -102,6 +173,7 @@ button{
 
 <div id="inicio">
 
+<p class="eyebrow">Sonido &middot; Frases</p>
 <h2>Nombre del audio</h2>
 
 <input

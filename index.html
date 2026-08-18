@@ -2,58 +2,223 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mis Juegos</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
-body{
-    background:#222;
-    color:white;
-    font-family:Arial;
+  :root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body{
+    margin:0; padding:0; min-height:100%;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  body{
+    padding: max(28px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  header{
+    width:100%; max-width:440px;
     text-align:center;
-    padding:20px;
-}
+    margin-bottom: 30px;
+  }
 
-button{
-    width:90%;
-    max-width:400px;
-    padding:20px;
-    margin:10px;
-    font-size:20px;
-}
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size: .78rem;
+    letter-spacing: .35em;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
+
+  h1{
+    font-family: 'Chakra Petch', sans-serif;
+    font-weight: 700;
+    font-size: 2.1rem;
+    letter-spacing: .02em;
+    margin: 0;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .rule{
+    width: 64px; height: 3px; margin: 16px auto 0;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border-radius: 2px;
+  }
+
+  main{
+    width:100%; max-width: 440px;
+    display:flex; flex-direction:column; gap: 14px;
+  }
+
+  .card{
+    --glow: var(--coral-glow);
+    --accent: var(--coral);
+    display:flex; align-items:center; gap:16px;
+    width:100%;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 16px 18px;
+    text-align:left;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+
+  .card::before{
+    content:"";
+    position:absolute; inset:0 auto 0 0;
+    width:4px;
+    background: var(--accent);
+  }
+
+  .card:nth-child(even){ --glow: var(--teal-glow); --accent: var(--teal); }
+
+  .card:active{
+    transform: scale(.97);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 24px -8px var(--glow);
+    border-color: var(--accent);
+  }
+
+  .icon{
+    flex: 0 0 auto;
+    width:48px; height:48px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 1.5rem;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  .label{ flex:1; min-width:0; }
+
+  .title{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight: 600;
+    font-size: 1.08rem;
+    letter-spacing: .01em;
+    color: var(--fg);
+  }
+
+  .subtitle{
+    font-size: .82rem;
+    color: var(--fg-muted);
+    margin-top: 2px;
+  }
+
+  .chevron{
+    flex: 0 0 auto;
+    color: var(--accent);
+    font-size: 1.3rem;
+    opacity: .8;
+  }
+
+  footer{
+    margin-top: 34px;
+    font-size: .72rem;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    opacity: .6;
+  }
 </style>
-
 </head>
 
 <body>
 
-<h1>Mis Juegos</h1>
+<header>
+  <p class="eyebrow">Selecciona una partida</p>
+  <h1>Mis Juegos</h1>
+  <div class="rule"></div>
+</header>
 
-<button onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Actividades.html'">
-Juego de Actividades
-</button>
+<main>
 
-<button onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Juego Opciones.html'">
-Elige como Sufrir
-</button>
+  <button class="card" onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Actividades.html'">
+    <span class="icon">🎯</span>
+    <span class="label">
+      <div class="title">Juego de Actividades</div>
+      <div class="subtitle">Retos y actividades sorpresa</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
 
-<button onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Sonido-Frases/Frases.html'">
-Actividades Especiales
-</button>
+  <button class="card" onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Juego%20Opciones.html'">
+    <span class="icon">🎲</span>
+    <span class="label">
+      <div class="title">Elige como Sufrir</div>
+      <div class="subtitle">Tú decides el castigo</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
 
-<button onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Sonido-Frases/Rep-Frases.html'">
-Rep Frases
-</button>
+  <button class="card" onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Sonido-Frases/Frases.html'">
+    <span class="icon">⭐</span>
+    <span class="label">
+      <div class="title">Actividades Especiales</div>
+      <div class="subtitle">Frases y sonidos únicos</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
 
-<button onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Frases Accion/reproductor-lista.html'">
-Seciones Dirigidas
-</button>
+  <button class="card" onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Sonido-Frases/Rep-Frases.html'">
+    <span class="icon">🔁</span>
+    <span class="label">
+      <div class="title">Rep Frases</div>
+      <div class="subtitle">Reproductor de frases</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
 
-<button onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Mental/juego-mental.html'">
-Mental
-</button>
+  <button class="card" onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Frases%20Accion/reproductor-lista.html'">
+    <span class="icon">🧭</span>
+    <span class="label">
+      <div class="title">Secciones Dirigidas</div>
+      <div class="subtitle">Sesiones guiadas paso a paso</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
 
+  <button class="card" onclick="location.href='https://fredyhb999-dev.github.io/Juego-Actividades/Mental/juego-mental.html'">
+    <span class="icon">🧠</span>
+    <span class="label">
+      <div class="title">Mental</div>
+      <div class="subtitle">Frases por carpetas, a tu ritmo</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
+
+</main>
+
+<footer>Juego-Actividades</footer>
 
 </body>
 </html>

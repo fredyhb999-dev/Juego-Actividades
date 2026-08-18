@@ -4,20 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Juego Mental</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
   :root{
-    --bg: #0f172a;
-    --bg-playing: #14532d;
-    --bg-paused: #7c2d12;
-    --bg-error: #7f1d1d;
-    --fg: #f8fafc;
-    --accent: #38bdf8;
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
   }
   *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body{
     margin:0; padding:0; height:100%; width:100%;
-    overflow:hidden; background:var(--bg); color:var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow:hidden; color:var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
     user-select:none;
   }
   #screen{
@@ -25,28 +34,41 @@
     display:flex; flex-direction:column;
     align-items:center; justify-content:center;
     text-align:center; padding:24px;
-    transition: background-color .4s ease;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    transition: background-color .4s ease, box-shadow .4s ease;
     cursor:pointer;
   }
-  #screen.playing{ background:var(--bg-playing); }
-  #screen.paused{ background:var(--bg-paused); }
-  #screen.error{ background:var(--bg-error); }
+  #screen.playing{ box-shadow: inset 0 0 140px var(--teal-glow); }
+  #screen.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
+  #screen.error{ box-shadow: inset 0 0 140px var(--coral-glow); background: radial-gradient(circle at 50% 0%, #351421, var(--bg)); }
 
-  #titulo{ font-size:1.5rem; opacity:.75; margin-bottom:8px; letter-spacing:.5px; }
-  #fase{ font-size:2.2rem; font-weight:700; margin-bottom:6px; }
-  #estado{ font-size:1.3rem; margin-bottom:28px; min-height:1.6em; }
-  #contador{ font-size:4rem; font-weight:800; letter-spacing:1px; font-variant-numeric: tabular-nums; }
+  #titulo{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; letter-spacing:.35em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:14px;
+  }
+  #fase{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:2rem; margin-bottom:8px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #estado{ font-size:1.1rem; margin-bottom:28px; min-height:1.6em; color: var(--fg-muted); }
+  #contador{ font-family:'Chakra Petch', sans-serif; font-size:3.6rem; font-weight:700; letter-spacing:1px; font-variant-numeric: tabular-nums; }
   #detalle{ font-size:1rem; opacity:.7; margin-top:10px; }
-  #progreso{ margin-top:28px; font-size:1rem; opacity:.6; }
-  #barra-wrap{ width:80%; max-width:420px; height:8px; background:rgba(255,255,255,.15); border-radius:4px; margin-top:14px; overflow:hidden; }
-  #barra{ height:100%; width:0%; background:var(--accent); transition:width .3s ease; }
-  #hint{ position:absolute; bottom:26px; font-size:.85rem; opacity:.5; }
+  #progreso{ margin-top:28px; font-size:.85rem; letter-spacing:.05em; color: var(--fg-muted); }
+  #barra-wrap{ width:80%; max-width:420px; height:6px; background:var(--card-border); border-radius:4px; margin-top:14px; overflow:hidden; }
+  #barra{ height:100%; width:0%; background: linear-gradient(90deg, var(--coral), var(--teal)); transition:width .3s ease; }
+  #hint{ position:absolute; bottom:max(26px, env(safe-area-inset-bottom)); font-size:.8rem; color: var(--fg-muted); opacity:.7; }
 </style>
 </head>
 <body>
 
 <div id="screen">
-  <div id="titulo">JUEGO MENTAL</div>
+  <div id="titulo">Mental</div>
   <div id="fase">Toca la pantalla</div>
   <div id="estado">para comenzar</div>
   <div id="contador"></div>

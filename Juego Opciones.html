@@ -1,17 +1,42 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Torneo Interactivo</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
+
+:root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   text-align: center;
-  padding: 15px;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
   margin: 0;
-  background: #f5f5f5;
+  background:
+    radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+    radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+    var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
 }
 
 .container {
@@ -19,17 +44,51 @@ body {
   margin: auto;
 }
 
+.eyebrow{
+  font-family:'Chakra Petch', sans-serif;
+  font-size:.78rem;
+  letter-spacing:.35em;
+  text-transform:uppercase;
+  color: var(--fg-muted);
+  margin-bottom:10px;
+}
+
+h2{
+  font-family:'Chakra Petch', sans-serif;
+  font-weight:700;
+  font-size:1.6rem;
+  letter-spacing:.02em;
+  margin:0 0 22px;
+  background: linear-gradient(90deg, var(--coral), var(--teal));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+
 button {
-  font-size: 18px;
-  padding: 12px 18px;
+  font-family:'Chakra Petch', sans-serif;
+  font-weight:600;
+  letter-spacing:.03em;
+  font-size: 1.05rem;
+  padding: 14px 22px;
   margin: 8px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
+  color: var(--bg);
+  background: linear-gradient(90deg, var(--coral), var(--teal));
+  transition: transform .15s ease, opacity .2s ease;
 }
 
 button:hover {
-  opacity: 0.9;
+  opacity: 0.92;
+}
+button:active{
+  transform: scale(.96);
+}
+button:disabled{
+  opacity:.45;
+  cursor:default;
 }
 
 #game {
@@ -47,11 +106,13 @@ button:hover {
 
 .card {
   flex: 1 1 250px;
-  font-size: 22px;
-  padding: 20px;
-  border: 2px solid #ccc;
-  border-radius: 12px;
-  background: white;
+  font-family:'Chakra Petch', sans-serif;
+  font-weight:600;
+  font-size: 1.35rem;
+  padding: 24px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--card);
   min-width: 200px;
 }
 
@@ -65,33 +126,53 @@ button:hover {
 #history {
   margin-top: 25px;
   text-align: left;
-  background: white;
-  padding: 10px;
-  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  padding: 14px 16px;
+  border-radius: 12px;
   max-height: 200px;
   overflow-y: auto;
 }
 
-.history-item {
-  font-size: 14px;
-  padding: 5px 0;
-  border-bottom: 1px solid #eee;
+#history strong{
+  font-family:'Chakra Petch', sans-serif;
+  font-size:.85rem;
+  letter-spacing:.05em;
+  color: var(--fg-muted);
 }
 
+.history-item {
+  font-size: 14px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--fg);
+}
+.history-item:last-child{ border-bottom:none; }
+
 #winner {
-  font-size: 22px;
+  font-family:'Chakra Petch', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
   margin-top: 20px;
 }
+
+#cargaMsg{
+  margin-top: 18px;
+  font-size: .85rem;
+  color: var(--fg-muted);
+  min-height: 20px;
+}
+#cargaMsg.error{ color: var(--coral); }
 
 /* RESPONSIVE */
 @media (max-width: 600px) {
   button {
     width: 100%;
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   .card {
-    font-size: 20px;
+    font-size: 1.15rem;
   }
 }
 </style>
@@ -101,9 +182,11 @@ button:hover {
 
 <div class="container">
 
-<h2>🔥 Eleccion de Castigo</h2>
+<p class="eyebrow">Elige como Sufrir</p>
+<h2>🔥 Elección de Castigo</h2>
 
-<button onclick="start()">Iniciar Juego</button>
+<button id="btnIniciar" onclick="start()" disabled>Cargando opciones...</button>
+<div id="cargaMsg"></div>
 
 <div id="game">
 
@@ -120,7 +203,7 @@ button:hover {
   <button onclick="start()">🔄 Reiniciar</button>
 
   <div id="history">
-    <strong>🧾 Historial de eliminados:</strong>
+    <strong>🧾 Historial de eliminados</strong>
     <div id="historyList"></div>
   </div>
 
@@ -132,71 +215,38 @@ button:hover {
 
 <script>
 
-/* 🔥 OPCIONES FIJAS */
-const ORIGINAL_LIST = [
-  "latigazos",
-  "spank",
-  "cachetadas",
-  "nalgadas",
-  "fuete",
-  "cachetadas en el pene",
-  "5 agujas en la cara",
-  "10 agujas en la cara",
-  "5 agujas en los testiculos",
-  "10 agujas en los testiculos",
-  "5 agujas en el pene",
-  "10 agujas en el pene",
-  "toques en el culo",
-  "toques en la verga",
-  "toques en el pecho",
-  "cocerte el hocico",
-  "perforarte la oreja",
-  "meter manita en el culo",
-  "coger duro",
-  "coger suave",
-  "te meto el dildo de perro",
-  "te meto el dildo de maiz",
-  "te meto e ldildo de dragon",
-  "te meto las bolas chinas chicas",
-  "te meto las bolas chinas grandes",
-  "toques en las nalgas",
-  "sonda en la verga",
-  "el corte gratis",
-  "sonda de castigo en la verga",
-  "tomar orina",
-  "orina en los ojos",
-  "picarte el culo con los dedos",
-  "meterte mi mano",
-  "abrirte el culo con instrumentos",
-  "poner bolsa en la cabeza",
-  "cogerte fuerte dandote con el latigo",
-  "ahorcarte",
-  "cogerte en cuatro con manos y rodillas",
-  "juego Actividad, 5 Rondas",
-  "poner arete atravesando oreja",
-  "cogerte empinado",
-  "agujas en las nalgas",
-  "atravesarte una aguja grande en los testiculos",
-  "atravesarte una aguja grande en la verga",
-  "atravesarte una aguja grande en los labios",
-  "cogerte de perrito hasta que yo termine",
-  "cogerte empinado hasta que yo termine",
-  "cogerte en el columpio hasta que yo termine",
-  "atravesarte las dos orejas con agujas",
-  "atravesarte 5 agujas en las cejas",
-  "atravesarte 10 agujas en las cejas",
-  "meterte y sacarte mi dildo 2 veces",
-  "meterte y sacarte mi dildo 3 veces",
-  "meterte y sacarte las bolas chinas grandes 2 veces",
-  "atravesar una aguja de adentro de la nariz",
-  "atravesar un pezon con aguja grande",
-  "inspeccion anal con guante de latex",
-  "marca con objeto caliente la piel",
-  "poner gengibre en el culo",
-  "atravesar 2 agujas en cada lado del escroto y amarrar",
-  "con cortes marcarte mi M",
-  "meterte y sacarte las bolas chinas grandes 3 veces"
-];
+// ======= ARCHIVO EXTERNO CON LAS OPCIONES =======
+// Edita "Juego Opciones.json" (junto a este HTML) para cambiar la lista.
+// Debe ser un arreglo JSON de textos, por ejemplo:
+// ["hacer lagartijas", "sentadillas", "correr"]
+const ARCHIVO_OPCIONES = "Juego Opciones.json";
+// ==================================================
+
+let ORIGINAL_LIST = [];
+
+const btnIniciar = document.getElementById("btnIniciar");
+const cargaMsg = document.getElementById("cargaMsg");
+
+async function cargarOpciones(){
+  cargaMsg.classList.remove("error");
+  cargaMsg.textContent = "Cargando opciones...";
+  try{
+    const res = await fetch(ARCHIVO_OPCIONES, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const datos = await res.json();
+    if(!Array.isArray(datos) || datos.length < 2) throw new Error("Se necesitan al menos 2 opciones");
+    ORIGINAL_LIST = datos;
+    cargaMsg.textContent = ORIGINAL_LIST.length+" opciones cargadas";
+    btnIniciar.disabled = false;
+    btnIniciar.textContent = "Iniciar Juego";
+  }catch(e){
+    cargaMsg.classList.add("error");
+    cargaMsg.textContent = "No se pudo cargar "+ARCHIVO_OPCIONES+". Revisa que el archivo exista y tenga formato JSON válido.";
+    btnIniciar.disabled = true;
+    btnIniciar.textContent = "Reintentar";
+    btnIniciar.onclick = cargarOpciones;
+  }
+}
 
 let list = [];
 let currentA = null;
@@ -254,6 +304,9 @@ function addHistory(item){
   div.innerText = "❌ " + item;
   document.getElementById("historyList").prepend(div);
 }
+
+btnIniciar.onclick = start;
+cargarOpciones();
 
 </script>
 

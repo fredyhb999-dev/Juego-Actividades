@@ -3,27 +3,148 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
 <title>Juego de Actividades</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
 
+:root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+}
 
-body{margin:0;font-family:Arial,sans-serif;background:#222;color:#fff;display:flex;justify-content:center;align-items:center;height:100vh;text-align:center}
-#app{width:90%;max-width:420px}
-h1{font-size:2rem;margin:.3em 0}
-#timer{font-size:4rem;font-weight:bold;margin:.3em 0}
-#round{font-size:1.1rem}
-input,button{font-size:1.2rem;padding:.6em;width:100%;box-sizing:border-box}
-button{margin-top:12px}
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body{
+    margin:0;
+    font-family:'Inter', system-ui, sans-serif;
+    background:
+        radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+        radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+        var(--bg);
+    color:var(--fg);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+    text-align:center;
+    padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+}
+
+#app{width:100%;max-width:420px}
+
+.eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.78rem;
+    letter-spacing:.35em;
+    text-transform:uppercase;
+    color: var(--fg-muted);
+    margin-bottom:10px;
+}
+
+h2{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700;
+    font-size:1.5rem;
+    letter-spacing:.02em;
+    margin:0 0 22px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+
+h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700;
+    font-size:1.9rem;
+    margin:.3em 0;
+}
+
+#timer{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:4rem;
+    font-weight:700;
+    margin:.2em 0;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+
+#round{
+    font-size:.9rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color: var(--fg-muted);
+}
+
+input{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:1.3rem;
+    padding:.7em;
+    width:100%;
+    box-sizing:border-box;
+    background: var(--card);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    color: var(--fg);
+    text-align:center;
+    outline:none;
+}
+input:focus{ border-color: var(--teal); }
+
+button{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600;
+    letter-spacing:.05em;
+    font-size:1.1rem;
+    padding:.75em;
+    width:100%;
+    box-sizing:border-box;
+    margin-top:16px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    transition: transform .15s ease, opacity .2s ease;
+}
+button:active{ transform: scale(.97); }
+button:disabled{ opacity:.5; cursor:default; }
+
+#cargaMsg{
+    margin-top:16px;
+    font-size:.85rem;
+    color: var(--fg-muted);
+    min-height:20px;
+}
+#cargaMsg.error{ color: var(--coral); }
+
 </style>
 </head>
 <body>
 
 <div id="app">
 <div id="setup">
+<p class="eyebrow">Juego de Actividades</p>
 <h2>¿Cuántas rondas?</h2>
 <input id="rounds" type="number" min="1" value="">
-<button id="start">Comenzar</button>
+<button id="start" disabled>Cargando actividades...</button>
+<div id="cargaMsg"></div>
 </div>
 
 <div id="game" style="display:none">
@@ -33,6 +154,13 @@ button{margin-top:12px}
 </div>
 </div>
 <script>
+
+// ======= ARCHIVO EXTERNO CON LAS ACTIVIDADES =======
+// Edita "Actividades.json" (junto a este HTML) para cambiar la rutina.
+// Debe ser un arreglo JSON de textos, por ejemplo:
+// ["hacer lagartijas", "sentadillas", "correr"]
+const ARCHIVO_ACTIVIDADES = "Actividades.json";
+// ====================================================
 
 let wakeLock = null;
 
@@ -48,10 +176,31 @@ async function mantenerPantallaEncendida(){
 
 }
 
-const actividades=[
-"Latigo","Spank","Fuete","Cachetadas","Agujas en cara","Meter bolas chinas Chicas","Meter bolas chinas Grandes","Bolsa en la Cabeza",
-"Agujas en Testiculos","Agujas en Pene","Amarrar los testiculos","Tomar Orina","Jalar Verga","Cachetear Verga","Clavar el Palo"
-];
+let actividades=[];
+
+const startBtn=document.getElementById("start");
+const cargaMsg=document.getElementById("cargaMsg");
+
+async function cargarActividades(){
+ cargaMsg.classList.remove("error");
+ cargaMsg.textContent="Cargando actividades...";
+ try{
+    const res=await fetch(ARCHIVO_ACTIVIDADES, {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const datos=await res.json();
+    if(!Array.isArray(datos) || datos.length===0) throw new Error("Lista vacía");
+    actividades=datos;
+    cargaMsg.textContent=actividades.length+" actividades cargadas";
+    startBtn.disabled=false;
+    startBtn.textContent="Comenzar";
+ }catch(e){
+    cargaMsg.classList.add("error");
+    cargaMsg.textContent="No se pudo cargar "+ARCHIVO_ACTIVIDADES+". Revisa que el archivo exista y tenga formato JSON válido.";
+    startBtn.disabled=true;
+    startBtn.textContent="Reintentar";
+    startBtn.onclick=cargarActividades;
+ }
+}
 
 let total=0,actual=0,estado="actividad",rest=0,intv;
 let lista=[];
@@ -106,7 +255,7 @@ function tick(){
  }
 }
 
-document.getElementById("start").onclick=async()=>{
+startBtn.onclick=async()=>{
  await mantenerPantallaEncendida();
  total=parseInt(document.getElementById("rounds").value)||1;
  document.getElementById("setup").style.display="none";
@@ -116,6 +265,8 @@ document.getElementById("start").onclick=async()=>{
  siguienteActividad();
  intv=setInterval(tick,1000);
 };
+
+cargarActividades();
 
 </script>
     
