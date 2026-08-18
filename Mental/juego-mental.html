@@ -177,9 +177,9 @@
     if(cls) screenEl.classList.add(cls);
   }
 
-  function updateProgreso(folderIdx, phraseIdx, phraseTotal){
-    progresoEl.textContent = `Carpeta ${folderIdx+1} / ${FOLDERS.length}`;
-    const pct = ((folderIdx + (phraseIdx/phraseTotal)) / FOLDERS.length) * 100;
+  function updateProgreso(folderIdx, phraseIdx, phraseTotal, totalFolders){
+    progresoEl.textContent = `Carpeta ${folderIdx+1} / ${totalFolders}`;
+    const pct = ((folderIdx + (phraseIdx/phraseTotal)) / totalFolders) * 100;
     barraEl.style.width = Math.min(100, Math.max(0,pct)) + "%";
   }
 
@@ -228,16 +228,14 @@
 
   // ---------- Secuencia principal ----------
   async function runGame(){
+    // 1) Construir el plan completo primero: consultamos todas las carpetas,
+    //    saltando silenciosamente las que estén vacías, para poder saber
+    //    con certeza cuál es la última frase real de todo el juego.
+    estadoEl.textContent = "Preparando carpetas...";
+    const plan = [];
     for(let fi=0; fi<FOLDERS.length; fi++){
-      if(state.stopRequested) break;
+      if(state.stopRequested) return;
       const folderName = FOLDERS[fi];
-
-      faseEl.textContent = folderName;
-      estadoEl.textContent = "Cargando frases...";
-      contadorEl.textContent = "";
-      detalleEl.textContent = "";
-      updateProgreso(fi, 0, FRASES_POR_CARPETA);
-
       let files;
       try{
         files = await listMp3(folderName);
@@ -245,13 +243,25 @@
         showError(`Error leyendo "${folderName}": ${e.message}`);
         return;
       }
-
       if(files.length === 0){
-        showError(`La carpeta "${folderName}" no tiene archivos .mp3`);
-        return;
+        continue; // carpeta vacía: se omite y no cuenta para el progreso
       }
-
       const seleccion = pickRandom(files, FRASES_POR_CARPETA);
+      plan.push({ folderName, seleccion });
+    }
+
+    if(plan.length === 0){
+      showError("Ninguna de las carpetas tiene archivos .mp3");
+      return;
+    }
+
+    // 2) Reproducir el plan
+    for(let fi=0; fi<plan.length; fi++){
+      if(state.stopRequested) break;
+      const { folderName, seleccion } = plan[fi];
+
+      faseEl.textContent = folderName;
+      updateProgreso(fi, 0, seleccion.length, plan.length);
 
       for(let pi=0; pi<seleccion.length; pi++){
         if(state.stopRequested) break;
@@ -260,7 +270,7 @@
         estadoEl.textContent = `Reproduciendo frase ${pi+1} de ${seleccion.length}`;
         detalleEl.textContent = item.name;
         contadorEl.textContent = "";
-        updateProgreso(fi, pi, seleccion.length);
+        updateProgreso(fi, pi, seleccion.length, plan.length);
 
         try{
           await playAudioFile(item.rawUrl);
@@ -271,7 +281,7 @@
 
         if(state.stopRequested) break;
 
-        const esUltimaFraseGlobal = (fi === FOLDERS.length-1) && (pi === seleccion.length-1);
+        const esUltimaFraseGlobal = (fi === plan.length-1) && (pi === seleccion.length-1);
         const esUltimaFraseDeCarpeta = (pi === seleccion.length-1);
 
         if(!esUltimaFraseGlobal){
