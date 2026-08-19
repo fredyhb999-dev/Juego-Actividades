@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Actividades por Impacto</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; min-height:100%; width:100%;
+    color:var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    user-select:none;
+  }
+
+  /* ---------- pantalla de inicio: toda la pantalla es botón ---------- */
+  #inicio{
+    height:100dvh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    cursor:pointer;
+  }
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.78rem; letter-spacing:.35em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:12px;
+  }
+  #inicio h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:2.1rem; margin:0 0 12px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #inicio p{
+    font-size:.92rem; color:var(--fg-muted); max-width:320px; margin:0;
+    line-height:1.5;
+  }
+  #inicioMsg{
+    margin-top:20px; font-size:.85rem; color: var(--coral); min-height:20px;
+  }
+
+  /* ---------- pantalla de resultados ---------- */
+  #resultado{
+    display:none;
+    min-height:100dvh; width:100%;
+    flex-direction:column; align-items:center;
+    padding: max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
+  }
+  #resultado h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.7rem; margin:0 0 22px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #lista{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; gap:12px;
+    margin-bottom:26px;
+  }
+  .nivel-card{
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius:16px;
+    padding:16px 18px;
+    text-align:left;
+    position:relative;
+    overflow:hidden;
+  }
+  .nivel-card::before{
+    content:"";
+    position:absolute; inset:0 auto 0 0;
+    width:4px;
+    background: var(--coral);
+  }
+  .nivel-card:nth-child(even)::before{ background: var(--teal); }
+  .nivel-label{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.72rem; letter-spacing:.2em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:6px;
+  }
+  .nivel-actividad{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600; font-size:1.15rem;
+  }
+
+  #btnSiguiente{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; letter-spacing:.06em; font-size:1.05rem;
+    width:100%; max-width:440px;
+    padding:16px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none; border-radius:14px;
+    cursor:pointer;
+    transition: transform .15s ease;
+  }
+  #btnSiguiente:active{ transform: scale(.97); }
+
+  #btnVolver{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600; letter-spacing:.05em; font-size:.9rem;
+    margin-top:14px;
+    padding:12px 26px;
+    color: var(--fg);
+    background: transparent;
+    border: 1px solid var(--card-border);
+    border-radius:12px;
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="inicio">
+  <p class="eyebrow">Actividades por Impacto</p>
+  <h1>Toca para comenzar</h1>
+  <p>Se elegirá una actividad aleatoria de cada nivel de impacto (1 al 5), según su ponderación.</p>
+  <div id="inicioMsg"></div>
+</div>
+
+<div id="resultado">
+  <h1>Tu rutina</h1>
+  <div id="lista"></div>
+  <button id="btnSiguiente">Siguiente</button>
+  <button id="btnVolver">Volver al inicio</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ====== CONFIGURACIÓN ======
+  const ARCHIVOS = [
+    { nivel: 1, archivo: "Impacto 1.json" },
+    { nivel: 2, archivo: "Impacto 2.json" },
+    { nivel: 3, archivo: "Impacto 3.json" },
+    { nivel: 4, archivo: "Impacto 4.json" },
+    { nivel: 5, archivo: "Impacto 5.json" }
+  ];
+  // ============================
+
+  const inicioEl    = document.getElementById("inicio");
+  const inicioMsgEl = document.getElementById("inicioMsg");
+  const resultadoEl = document.getElementById("resultado");
+  const listaEl      = document.getElementById("lista");
+  const btnSiguiente = document.getElementById("btnSiguiente");
+  const btnVolver    = document.getElementById("btnVolver");
+
+  let listasPorNivel = null; // { 1: [{nombre,peso}], 2: [...], ... }
+  let ultimaPorNivel = {};   // { 1: "nombre elegido antes", ... }
+  let wakeLock = null;
+
+  // ---------- Wake Lock ----------
+  async function requestWakeLock(){
+    try{
+      if("wakeLock" in navigator){
+        wakeLock = await navigator.wakeLock.request("screen");
+      }
+    }catch(e){
+      console.warn("No se pudo activar Wake Lock:", e);
+    }
+  }
+  document.addEventListener("visibilitychange", async ()=>{
+    if(document.visibilityState === "visible" && resultadoEl.style.display === "flex"){
+      await requestWakeLock();
+    }
+  });
+
+  // ---------- Carga de los 5 archivos ----------
+  async function cargarListas(){
+    const datos = {};
+    for(const { nivel, archivo } of ARCHIVOS){
+      const res = await fetch(archivo, { cache: "no-store" });
+      if(!res.ok){
+        throw new Error(`No se pudo cargar "${archivo}" (HTTP ${res.status})`);
+      }
+      const arr = await res.json();
+      if(!Array.isArray(arr) || arr.length === 0){
+        throw new Error(`"${archivo}" está vacío o no es una lista válida`);
+      }
+      // Validar formato mínimo
+      arr.forEach(item=>{
+        if(typeof item.nombre !== "string" || typeof item.peso !== "number"){
+          throw new Error(`"${archivo}" tiene un elemento sin "nombre" o "peso" numérico`);
+        }
+      });
+      datos[nivel] = arr;
+    }
+    return datos;
+  }
+
+  // ---------- Selección aleatoria ponderada, evitando repetir la anterior ----------
+  function elegirPonderado(lista, excluirNombre){
+    let pool = lista;
+    if(excluirNombre !== undefined && lista.length > 1){
+      const filtrada = lista.filter(item => item.nombre !== excluirNombre);
+      if(filtrada.length > 0) pool = filtrada;
+    }
+    const totalPeso = pool.reduce((acc, item) => acc + Math.max(0, item.peso), 0);
+    if(totalPeso <= 0){
+      // Si todos los pesos son 0, elige uniformemente
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    let r = Math.random() * totalPeso;
+    for(const item of pool){
+      r -= Math.max(0, item.peso);
+      if(r <= 0) return item;
+    }
+    return pool[pool.length - 1]; // resguardo por redondeo
+  }
+
+  function generarRutina(){
+    listaEl.innerHTML = "";
+    ARCHIVOS.forEach(({ nivel })=>{
+      const lista = listasPorNivel[nivel];
+      const elegido = elegirPonderado(lista, ultimaPorNivel[nivel]);
+      ultimaPorNivel[nivel] = elegido.nombre;
+
+      const card = document.createElement("div");
+      card.className = "nivel-card";
+      card.innerHTML = `
+        <div class="nivel-label">Impacto ${nivel}</div>
+        <div class="nivel-actividad">${elegido.nombre}</div>
+      `;
+      listaEl.appendChild(card);
+    });
+  }
+
+  // ---------- Flujo ----------
+  inicioEl.addEventListener("click", async ()=>{
+    inicioMsgEl.textContent = "Cargando actividades...";
+    try{
+      listasPorNivel = await cargarListas();
+    }catch(e){
+      inicioMsgEl.textContent = e.message;
+      return;
+    }
+    await requestWakeLock();
+    ultimaPorNivel = {};
+    generarRutina();
+    inicioEl.style.display = "none";
+    resultadoEl.style.display = "flex";
+  });
+
+  btnSiguiente.addEventListener("click", ()=>{
+    generarRutina();
+  });
+
+  btnVolver.addEventListener("click", ()=>{
+    resultadoEl.style.display = "none";
+    inicioEl.style.display = "flex";
+    inicioMsgEl.textContent = "";
+  });
+
+})();
+</script>
+</body>
+</html>
