@@ -1,7 +1,6 @@
 [
-  { "nombre": "Ponle la bolsa en la cabeza", "peso": 6 },
+  { "nombre": "Ponle una bolsa en la cabeza", "peso": 6 },
   { "nombre": "Ahórcalo con las manos", "peso": 5 },
-  { "nombre": "Ahórcalo con una cuerda", "peso": 4 },
   { "nombre": "Ahórcalo con la cinta negra", "peso": 3 },
   { "nombre": "Ahórcalo con un cinturón", "peso": 3 },
   { "nombre": "Ahórcalo con lo que quieras", "peso": 3 }
