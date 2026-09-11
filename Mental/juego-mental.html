@@ -29,6 +29,57 @@
     font-family: 'Inter', system-ui, sans-serif;
     user-select:none;
   }
+
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; letter-spacing:.35em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:14px;
+  }
+
+  /* ---------- pantalla de configuración ---------- */
+  #config{
+    height:100dvh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+  }
+  #config h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.8rem; margin:0 0 10px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #config p{
+    font-size:.88rem; color:var(--fg-muted); max-width:320px; margin:0 0 26px;
+  }
+  #config input{
+    width:100%; max-width:200px;
+    font-size:1.4rem; text-align:center;
+    padding:12px; margin-bottom:22px;
+    border-radius:12px; border:1px solid var(--card-border);
+    background: var(--card); color:var(--fg);
+  }
+  #config button{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; letter-spacing:.06em; font-size:1.05rem;
+    width:100%; max-width:260px;
+    padding:16px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none; border-radius:14px;
+    cursor:pointer;
+    transition: transform .15s ease;
+  }
+  #config button:active{ transform: scale(.97); }
+  #configMsg{
+    margin-top:14px; font-size:.85rem; color:var(--coral); min-height:18px;
+  }
+
+  /* ---------- pantalla de reproducción ---------- */
   #screen{
     height:100dvh; width:100vw;
     display:flex; flex-direction:column;
@@ -45,11 +96,6 @@
   #screen.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
   #screen.error{ box-shadow: inset 0 0 140px var(--coral-glow); background: radial-gradient(circle at 50% 0%, #351421, var(--bg)); }
 
-  #titulo{
-    font-family:'Chakra Petch', sans-serif;
-    font-size:.85rem; letter-spacing:.35em; text-transform:uppercase;
-    color: var(--fg-muted); margin-bottom:14px;
-  }
   #fase{
     font-family:'Chakra Petch', sans-serif;
     font-weight:700; font-size:2rem; margin-bottom:8px;
@@ -67,10 +113,19 @@
 </head>
 <body>
 
-<div id="screen">
-  <div id="titulo">Mental</div>
-  <div id="fase">Toca la pantalla</div>
-  <div id="estado">para comenzar</div>
+<div id="config">
+  <div class="eyebrow">Mental</div>
+  <h1>Antes de comenzar</h1>
+  <p>¿Cuántos segundos deben pasar entre cada frase?</p>
+  <input id="tiempoFrase" type="number" min="1" step="1" value="30" inputmode="numeric">
+  <button id="btnConfigIniciar">Iniciar</button>
+  <div id="configMsg"></div>
+</div>
+
+<div id="screen" style="display:none;">
+  <div class="eyebrow">Mental</div>
+  <div id="fase"></div>
+  <div id="estado"></div>
   <div id="contador"></div>
   <div id="detalle"></div>
   <div id="barra-wrap"><div id="barra"></div></div>
@@ -91,9 +146,14 @@
   const BASE_FOLDER = "Mental";
   const FOLDERS = ["Fase 1a","Fase 1b","Fase 2a","Fase 2b","Fase 3a","Fase 3b","Fase 4a","Fase 4b","Especial"];
   const FRASES_POR_CARPETA = 7;
-  const ESPERA_FRASE_MS = 0.5 * 60 * 1000; // 30 segundos entre frases de la misma carpeta
+  let ESPERA_FRASE_MS = 0.5 * 60 * 1000; // valor por defecto; se sobrescribe con lo que el usuario indique al inicio
   const ESPERA_CARPETA_MS = 1 * 60 * 1000; // 1 minuto al cambiar de carpeta
   // ============================
+
+  const configEl        = document.getElementById("config");
+  const tiempoFraseInput = document.getElementById("tiempoFrase");
+  const btnConfigIniciar = document.getElementById("btnConfigIniciar");
+  const configMsgEl      = document.getElementById("configMsg");
 
   const screenEl   = document.getElementById("screen");
   const faseEl     = document.getElementById("fase");
@@ -365,29 +425,42 @@
     }
   }
 
-  function resetToIdle(){
+  function volverAConfig(){
     state.running = false;
     state.paused = false;
     state.stopRequested = false;
     state.finished = false;
     setScreenClass("");
-    faseEl.textContent = "Toca la pantalla";
-    estadoEl.textContent = "para comenzar";
+    faseEl.textContent = "";
+    estadoEl.textContent = "";
     contadorEl.textContent = "";
     detalleEl.textContent = "";
     progresoEl.textContent = "";
     barraEl.style.width = "0%";
     hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
+    screenEl.style.display = "none";
+    configEl.style.display = "flex";
   }
 
   screenEl.addEventListener("click", ()=>{
-    if(!state.running && !state.finished){
-      startGame();
-    }else if(state.finished){
-      resetToIdle();
-    }else{
+    if(state.finished){
+      volverAConfig();
+    }else if(state.running){
       togglePause();
     }
+  });
+
+  btnConfigIniciar.addEventListener("click", ()=>{
+    const segundos = parseFloat(tiempoFraseInput.value);
+    if(!segundos || segundos <= 0){
+      configMsgEl.textContent = "Escribe un número de segundos válido.";
+      return;
+    }
+    configMsgEl.textContent = "";
+    ESPERA_FRASE_MS = segundos * 1000;
+    configEl.style.display = "none";
+    screenEl.style.display = "flex";
+    startGame();
   });
 
 })();

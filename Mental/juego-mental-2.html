@@ -57,6 +57,22 @@
     font-size:.88rem; color:var(--fg-muted); text-align:center;
     max-width:340px; margin:0 0 26px;
   }
+  #campoTiempo{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  #campoTiempo label{
+    font-size:.88rem; color:var(--fg-muted); margin-bottom:8px;
+  }
+  #campoTiempo input{
+    width:100%; max-width:160px;
+    font-size:1.3rem; text-align:center;
+    padding:10px; border-radius:12px;
+    border:1px solid var(--card-border);
+    background: var(--card); color:var(--fg);
+  }
   #listaCarpetas{
     width:100%; max-width:440px;
     display:flex; flex-direction:column; gap:10px;
@@ -173,7 +189,11 @@
 <div id="seleccion">
   <p class="eyebrow">Mental 2</p>
   <h1>Elige las carpetas</h1>
-  <p class="desc">Selecciona una o más carpetas. Se reproducirán todos los audios que contengan, en orden aleatorio, con 20 segundos entre cada frase.</p>
+  <p class="desc">Selecciona una o más carpetas. Se reproducirán todos los audios que contengan, en orden aleatorio.</p>
+  <div id="campoTiempo">
+    <label for="tiempoFrase">Segundos entre cada frase</label>
+    <input id="tiempoFrase" type="number" min="1" step="1" value="10" inputmode="numeric">
+  </div>
   <div id="listaCarpetas"></div>
   <button id="btnIniciarSel" disabled>Iniciar</button>
   <div id="selMsg" class="info">Cargando carpetas...</div>
@@ -203,7 +223,8 @@
   const BRANCH = "main";
   const BASE_FOLDER = "Mental";
   // ============================
-  const ESPERA_MS = 10 * 1000; // 20 segundos entre cada frase
+  let ESPERA_MS = 10 * 1000; // valor por defecto; se sobrescribe con lo que el usuario indique al inicio
+  const tiempoFraseInput = document.getElementById("tiempoFrase");
   const btnReintentarSel = document.getElementById("btnReintentarSel");
   let FOLDERS = []; // se llena dinámicamente consultando el repositorio
 
@@ -557,6 +578,15 @@
 
   btnIniciarSel.addEventListener("click", ()=>{
     if(seleccionadas.size === 0) return;
+
+    const segundos = parseFloat(tiempoFraseInput.value);
+    if(!segundos || segundos <= 0){
+      selMsgEl.className = "";
+      selMsgEl.textContent = "Escribe un número de segundos válido.";
+      return;
+    }
+    ESPERA_MS = segundos * 1000;
+
     selMsgEl.textContent = "";
     const carpetasElegidas = FOLDERS.filter(f => seleccionadas.has(f)); // respeta el orden original
     seleccionEl.style.display = "none";
