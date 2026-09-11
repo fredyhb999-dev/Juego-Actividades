@@ -2,142 +2,147 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reproductor Automático</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Rep Audios esp Minutos</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
-
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-    font-family:Arial,Helvetica,sans-serif;
-}
-
-html,body{
-    width:100%;
-    height:100%;
-    background:#f2f2f2;
-}
-
-body{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-}
-
-#inicio,
-#player{
-    width:100%;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    align-items:center;
-    padding:30px;
-}
-
-#player{
-    display:none;
-    cursor:pointer;
+  :root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+    --wait-glow: rgba(165, 153, 199, .35);
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%; width:100%;
+    overflow:hidden; color:var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
     user-select:none;
-    transition:.25s;
-}
+  }
 
-#player.playing{
-    background:#1d3557;
-    color:white;
-}
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; letter-spacing:.35em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:14px;
+  }
 
-#player.paused{
-    background:#555;
-    color:white;
-}
+  /* ---------- pantalla de configuración ---------- */
+  #config{
+    height:100dvh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+  }
+  #config h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.8rem; margin:0 0 10px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #config p{
+    font-size:.88rem; color:var(--fg-muted); max-width:320px; margin:0 0 26px;
+  }
+  #config input{
+    width:100%; max-width:200px;
+    font-size:1.4rem; text-align:center;
+    padding:12px; margin-bottom:22px;
+    border-radius:12px; border:1px solid var(--card-border);
+    background: var(--card); color:var(--fg);
+  }
+  #config button{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; letter-spacing:.06em; font-size:1.05rem;
+    width:100%; max-width:260px;
+    padding:16px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none; border-radius:14px;
+    cursor:pointer;
+    transition: transform .15s ease, opacity .2s ease;
+  }
+  #config button:active{ transform: scale(.97); }
+  #config button:disabled{ opacity:.4; cursor:default; }
+  #configMsg{
+    margin-top:14px; font-size:.85rem; color:var(--coral); min-height:18px;
+  }
 
-#player.esperando{
-    background:#8d99ae;
-    color:white;
-}
+  /* ---------- pantalla de reproducción ---------- */
+  #player{
+    display:none;
+    height:100dvh; width:100vw;
+    flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    transition: background-color .4s ease, box-shadow .4s ease;
+    cursor:pointer;
+  }
+  #player.playing{ box-shadow: inset 0 0 140px var(--teal-glow); }
+  #player.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
+  #player.esperando{ box-shadow: inset 0 0 140px var(--wait-glow); }
 
-h2{
-    margin-bottom:20px;
-    text-align:center;
-}
-
-input{
-    width:100%;
-    max-width:300px;
-    font-size:22px;
-    padding:14px;
-    margin-top:10px;
-    margin-bottom:20px;
-    text-align:center;
-}
-
-button{
-    font-size:22px;
-    padding:14px 30px;
-}
-
-#icono{
-    font-size:120px;
-}
-
-#nombreAudio{
-    margin-top:25px;
-    font-size:24px;
-    text-align:center;
+  #icono{
+    font-size:100px;
+    line-height:1;
+    margin-bottom:10px;
+  }
+  #nombreAudio{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.7rem; margin-top:15px;
+    max-width:90%;
     word-break:break-word;
-}
-
-#mensaje{
-    margin-top:20px;
-    color:red;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #estadoPlayer{
+    font-size:1.05rem; margin-top:14px; color: var(--fg-muted);
+  }
+  #info{
+    position:absolute; bottom:max(26px, env(safe-area-inset-bottom));
+    font-size:.8rem; color: var(--fg-muted); opacity:.7;
     text-align:center;
-    min-height:28px;
-}
-
-#info{
-    margin-top:35px;
-    font-size:18px;
-    opacity:.8;
-    text-align:center;
-}
-
+  }
 </style>
 </head>
 
 <body>
 
-<div id="inicio">
-
-<h2>Minutos entre cada audio</h2>
-
-<input
-id="minutos"
-type="number"
-min="1"
-step="1"
-value="4"
-inputmode="numeric">
-
-<button id="btnIniciar">Iniciar</button>
-
-<div id="mensaje"></div>
-
+<div id="config">
+  <div class="eyebrow">Rep Audios esp Minutos</div>
+  <h1>Minutos entre cada audio</h1>
+  <p>Elige cada cuántos minutos quieres que se reproduzca un nuevo audio.</p>
+  <input id="minutos" type="number" min="1" step="1" value="4" inputmode="numeric">
+  <button id="btnIniciar">Iniciar</button>
+  <div id="configMsg"></div>
 </div>
 
 <div id="player">
-
-<div id="icono">⏸</div>
-
-<div id="nombreAudio"></div>
-
-<div id="info">
-Toca cualquier parte de la pantalla
-<br>
-para Pausar / Reanudar
-</div>
-
+  <div id="icono">⏸</div>
+  <div id="nombreAudio"></div>
+  <div id="estadoPlayer"></div>
+  <div id="info">
+    Toca cualquier parte de la pantalla
+    <br>
+    para Pausar / Reanudar
+  </div>
 </div>
 
 <audio id="audio"></audio>
@@ -152,14 +157,15 @@ const REPO    = "Juego-Actividades";
 const CARPETA = "Audio c 4 Minutos";
 //==============================
 
-const inicio=document.getElementById("inicio");
+const configEl=document.getElementById("config");
 const minutosInput=document.getElementById("minutos");
 const btnIniciar=document.getElementById("btnIniciar");
-const mensaje=document.getElementById("mensaje");
+const configMsg=document.getElementById("configMsg");
 const player=document.getElementById("player");
 const audio=document.getElementById("audio");
 const icono=document.getElementById("icono");
 const nombre=document.getElementById("nombreAudio");
+const estadoPlayer=document.getElementById("estadoPlayer");
 
 let listaOriginal=[];
 let bolsa=[];
@@ -167,6 +173,7 @@ let minutosEspera=4;
 let wakeLock=null;
 let pausadoManual=false;
 let temporizador=null;
+let ultimoUrl=null;
 
 const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 
@@ -232,8 +239,6 @@ function siguienteAudio(){
     return siguiente;
 }
 
-let ultimoUrl=null;
-
 //---------------------------------------------
 function reproducir(item){
 
@@ -246,6 +251,7 @@ function reproducir(item){
         player.className="playing";
         icono.textContent="⏸";
         nombre.textContent=item.nombre;
+        estadoPlayer.textContent="Reproduciendo";
     })
     .catch(()=>{
         // Si un audio falla, intenta con el siguiente
@@ -257,6 +263,7 @@ function reproducir(item){
 function programarSiguiente(minutos){
     player.className="esperando";
     icono.textContent="⏳";
+    estadoPlayer.textContent="Siguiente audio en unos momentos...";
     clearTimeout(temporizador);
     temporizador=setTimeout(()=>{
         if(!pausadoManual){
@@ -273,7 +280,6 @@ audio.onended=()=>{
 };
 
 audio.onerror=()=>{
-    mensaje.textContent="";
     programarSiguiente(0);
 };
 
@@ -288,11 +294,13 @@ player.onclick=()=>{
         audio.play();
         player.className="playing";
         icono.textContent="⏸";
+        estadoPlayer.textContent="Reproduciendo";
         pausadoManual=false;
     }else{
         audio.pause();
         player.className="paused";
         icono.textContent="▶";
+        estadoPlayer.textContent="Pausado";
         pausadoManual=true;
     }
 
@@ -304,24 +312,24 @@ btnIniciar.onclick=async()=>{
     const minutosValor=parseInt(minutosInput.value,10);
 
     if(!minutosValor || minutosValor<1){
-        mensaje.textContent="Escribe un número válido de minutos.";
+        configMsg.textContent="Escribe un número válido de minutos.";
         return;
     }
 
     minutosEspera=minutosValor;
-    mensaje.textContent="Cargando lista de audios...";
+    configMsg.textContent="Cargando lista de audios...";
     btnIniciar.disabled=true;
 
     try{
         listaOriginal=await cargarAudios();
     }catch(e){
-        mensaje.textContent="Error al cargar los audios. Revisa tu conexión.";
+        configMsg.textContent="Error al cargar los audios. Revisa tu conexión.";
         btnIniciar.disabled=false;
         return;
     }
 
     if(listaOriginal.length===0){
-        mensaje.textContent="No se encontraron audios en la carpeta.";
+        configMsg.textContent="No se encontraron audios en la carpeta.";
         btnIniciar.disabled=false;
         return;
     }
@@ -331,7 +339,7 @@ btnIniciar.onclick=async()=>{
 
     await mantenerPantalla();
 
-    inicio.style.display="none";
+    configEl.style.display="none";
     player.style.display="flex";
 
     const item=siguienteAudio();
