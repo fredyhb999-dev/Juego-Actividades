@@ -173,6 +173,7 @@
 const USUARIO = "fredyhb999-dev";
 const REPO    = "Juego-Actividades";
 const CARPETA = "Audio c 4 Minutos";
+const SUBCARPETA_0 = "Principiante"; // se reproduce completa una sola vez, al inicio
 const SUBCARPETA_1 = "Avanzado"; // se reproduce primero en cada vuelta
 const SUBCARPETA_2 = "Experto";  // se reproduce al final de cada vuelta
 //==============================
@@ -190,6 +191,7 @@ const estadoPlayer=document.getElementById("estadoPlayer");
 
 let listaAvanzado=[];
 let listaExperto=[];
+let colaPrincipiante=[]; // se reproduce completa, en orden, una sola vez al inicio
 let barajaAvanzado=[];
 let barajaExperto=[];
 let ultimoAvanzado=null;
@@ -242,6 +244,10 @@ async function listarAudiosDe(ruta){
 }
 
 async function cargarAudios(){
+    const listaPrincipiante=await listarAudiosDe(CARPETA+"/"+SUBCARPETA_0);
+    listaPrincipiante.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+    colaPrincipiante=listaPrincipiante;
+
     listaAvanzado=await listarAudiosDe(CARPETA+"/"+SUBCARPETA_1);
     listaExperto=await listarAudiosDe(CARPETA+"/"+SUBCARPETA_2);
 }
@@ -283,6 +289,10 @@ function sacarDeBaraja(categoria){
 }
 
 function siguienteAudio(){
+
+    if(colaPrincipiante.length>0){
+        return colaPrincipiante.shift();
+    }
 
     const hayAvanzado=listaAvanzado.length>0;
     const hayExperto=listaExperto.length>0;
@@ -402,8 +412,8 @@ btnIniciar.onclick=async()=>{
         return;
     }
 
-    if(listaAvanzado.length===0 && listaExperto.length===0){
-        configMsg.textContent="No se encontraron audios en ninguna de las dos carpetas.";
+    if(colaPrincipiante.length===0 && listaAvanzado.length===0 && listaExperto.length===0){
+        configMsg.textContent="No se encontraron audios en ninguna de las carpetas.";
         btnIniciar.disabled=false;
         return;
     }
