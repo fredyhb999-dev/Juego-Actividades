@@ -57,10 +57,19 @@
   #config p{
     font-size:.88rem; color:var(--fg-muted); max-width:320px; margin:0 0 26px;
   }
+  #config .campo{
+    width:100%; max-width:280px;
+    display:flex; flex-direction:column;
+    align-items:center;
+    margin-bottom:18px;
+  }
+  #config .campo label{
+    font-size:.85rem; color:var(--fg-muted); margin-bottom:8px;
+  }
   #config input{
     width:100%; max-width:200px;
     font-size:1.4rem; text-align:center;
-    padding:12px; margin-bottom:22px;
+    padding:12px; margin-bottom:0;
     border-radius:12px; border:1px solid var(--card-border);
     background: var(--card); color:var(--fg);
   }
@@ -68,7 +77,7 @@
     font-family:'Chakra Petch', sans-serif;
     font-weight:700; letter-spacing:.06em; font-size:1.05rem;
     width:100%; max-width:260px;
-    padding:16px;
+    padding:16px; margin-top:8px;
     color: var(--bg);
     background: linear-gradient(90deg, var(--coral), var(--teal));
     border:none; border-radius:14px;
@@ -127,9 +136,18 @@
 
 <div id="config">
   <div class="eyebrow">Rep Audios esp Minutos</div>
-  <h1>Minutos entre cada audio</h1>
-  <p>Elige cada cuántos minutos quieres que se reproduzca un nuevo audio.</p>
-  <input id="minutos" type="number" min="1" step="1" value="4" inputmode="numeric">
+  <h1>Configura la reproducción</h1>
+
+  <div class="campo">
+    <label for="minutos">Minutos entre cada audio</label>
+    <input id="minutos" type="number" min="1" step="1" value="4" inputmode="numeric">
+  </div>
+
+  <div class="campo">
+    <label for="proporcion">Audios de Avanzado por cada Experto</label>
+    <input id="proporcion" type="number" min="1" step="1" value="2" inputmode="numeric">
+  </div>
+
   <button id="btnIniciar">Iniciar</button>
   <div id="configMsg"></div>
 </div>
@@ -161,6 +179,7 @@ const SUBCARPETA_2 = "Experto";  // se reproduce al final de cada vuelta
 
 const configEl=document.getElementById("config");
 const minutosInput=document.getElementById("minutos");
+const proporcionInput=document.getElementById("proporcion");
 const btnIniciar=document.getElementById("btnIniciar");
 const configMsg=document.getElementById("configMsg");
 const player=document.getElementById("player");
@@ -171,12 +190,16 @@ const estadoPlayer=document.getElementById("estadoPlayer");
 
 let listaAvanzado=[];
 let listaExperto=[];
-let cola=[];
+let barajaAvanzado=[];
+let barajaExperto=[];
+let ultimoAvanzado=null;
+let ultimoExperto=null;
+let proporcion=2; // audios de Avanzado por cada 1 de Experto
+let pasoCiclo=0;   // cuántos "Avanzado" van reproducidos desde el último "Experto"
 let minutosEspera=4;
 let wakeLock=null;
 let pausadoManual=false;
 let temporizador=null;
-let ultimoUrl=null;
 
 const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 
@@ -233,18 +256,54 @@ function mezclar(arr){
     return copia;
 }
 
-function siguienteAudio(){
-    if(cola.length===0){
-        // Cada vuelta nueva: primero todo "Avanzado" mezclado, luego todo "Experto" mezclado
-        cola=mezclar(listaAvanzado).concat(mezclar(listaExperto));
-        // Evita repetir el último audio del ciclo anterior justo al inicio del nuevo
-        if(cola.length>1 && cola[0].url===ultimoUrl){
-            [cola[0],cola[1]]=[cola[1],cola[0]];
+function sacarDeBaraja(categoria){
+
+    if(categoria==="avanzado"){
+        if(barajaAvanzado.length===0){
+            barajaAvanzado=mezclar(listaAvanzado);
+            if(barajaAvanzado.length>1 && barajaAvanzado[0].url===ultimoAvanzado){
+                [barajaAvanzado[0],barajaAvanzado[1]]=[barajaAvanzado[1],barajaAvanzado[0]];
+            }
         }
+        const item=barajaAvanzado.shift();
+        ultimoAvanzado=item.url;
+        return item;
+    }else{
+        if(barajaExperto.length===0){
+            barajaExperto=mezclar(listaExperto);
+            if(barajaExperto.length>1 && barajaExperto[0].url===ultimoExperto){
+                [barajaExperto[0],barajaExperto[1]]=[barajaExperto[1],barajaExperto[0]];
+            }
+        }
+        const item=barajaExperto.shift();
+        ultimoExperto=item.url;
+        return item;
     }
-    const siguiente=cola.shift();
-    ultimoUrl=siguiente.url;
-    return siguiente;
+
+}
+
+function siguienteAudio(){
+
+    const hayAvanzado=listaAvanzado.length>0;
+    const hayExperto=listaExperto.length>0;
+
+    let categoria;
+
+    if(hayAvanzado && hayExperto){
+        if(pasoCiclo<proporcion){
+            categoria="avanzado";
+            pasoCiclo++;
+        }else{
+            categoria="experto";
+            pasoCiclo=0;
+        }
+    }else if(hayAvanzado){
+        categoria="avanzado";
+    }else{
+        categoria="experto";
+    }
+
+    return sacarDeBaraja(categoria);
 }
 
 //---------------------------------------------
@@ -318,13 +377,20 @@ player.onclick=()=>{
 btnIniciar.onclick=async()=>{
 
     const minutosValor=parseInt(minutosInput.value,10);
+    const proporcionValor=parseInt(proporcionInput.value,10);
 
     if(!minutosValor || minutosValor<1){
         configMsg.textContent="Escribe un número válido de minutos.";
         return;
     }
 
+    if(!proporcionValor || proporcionValor<1){
+        configMsg.textContent="Escribe un número válido de audios de Avanzado por Experto.";
+        return;
+    }
+
     minutosEspera=minutosValor;
+    proporcion=proporcionValor;
     configMsg.textContent="Cargando lista de audios...";
     btnIniciar.disabled=true;
 
@@ -342,7 +408,9 @@ btnIniciar.onclick=async()=>{
         return;
     }
 
-    cola=[];
+    barajaAvanzado=[];
+    barajaExperto=[];
+    pasoCiclo=0;
     pausadoManual=false;
 
     await mantenerPantalla();
