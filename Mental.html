@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mis Juegos</title>
+<title>Mental</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,6 +141,17 @@
     opacity: .8;
   }
 
+  .back{
+    display: inline-flex; align-items:center; gap:6px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size: .85rem; font-weight: 500;
+    color: var(--fg-muted);
+    text-decoration: none;
+    margin-bottom: 20px;
+    transition: color .2s;
+  }
+  .back:hover{ color: var(--fg); }
+
   footer{
     margin-top: 34px;
     font-size: .72rem;
@@ -154,46 +165,30 @@
 
 <body>
 
+<a class="back" href="index.html">← Volver</a>
+
 <header>
-  <p class="eyebrow">Selecciona una categoría</p>
-  <h1>Mis Juegos</h1>
+  <p class="eyebrow">Categoría</p>
+  <h1>Mental</h1>
   <div class="rule"></div>
 </header>
 
 <main>
 
-  <button class="card" onclick="location.href='Juegos.html'">
-    <span class="icon">🎮</span>
-    <span class="label">
-      <div class="title">Juegos / Acción</div>
-      <div class="subtitle">Rondas, castigos e impacto</div>
-    </span>
-    <span class="chevron">›</span>
-  </button>
-
-  <button class="card" onclick="location.href='JuegosGuiados.html'">
-    <span class="icon">🎧</span>
-    <span class="label">
-      <div class="title">Juegos Guiados</div>
-      <div class="subtitle">Actividades guiadas en audio</div>
-    </span>
-    <span class="chevron">›</span>
-  </button>
-
-  <button class="card" onclick="location.href='Audios.html'">
-    <span class="icon">🔊</span>
-    <span class="label">
-      <div class="title">Audios Guiados</div>
-      <div class="subtitle">Frases, sesiones y reproducción</div>
-    </span>
-    <span class="chevron">›</span>
-  </button>
-
-  <button class="card" onclick="location.href='Mental.html'">
+  <button class="card" onclick="location.href='Mental/juego-mental.html'">
     <span class="icon">🧠</span>
     <span class="label">
-      <div class="title">Mental</div>
-      <div class="subtitle">Juego mental y frases</div>
+      <div class="title">Juego Mental</div>
+      <div class="subtitle">Audios para Juego Mental, a tu ritmo</div>
+    </span>
+    <span class="chevron">›</span>
+  </button>
+
+  <button class="card" onclick="location.href='Mental/juego-mental-2.html'">
+    <span class="icon">🔁</span>
+    <span class="label">
+      <div class="title">Rep Frases Juego Mental</div>
+      <div class="subtitle">Reproduce Carpetas de Juego Mental</div>
     </span>
     <span class="chevron">›</span>
   </button>
