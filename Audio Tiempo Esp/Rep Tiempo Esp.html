@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Rep Tiempo Esp</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+    --wait-glow: rgba(165, 153, 199, .35);
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; height:100%; width:100%;
+    overflow:hidden; color:var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    user-select:none;
+  }
+
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.78rem; letter-spacing:.14em; text-transform:uppercase;
+    line-height:1.7;
+    color: var(--fg-muted); margin-bottom:16px;
+  }
+
+  .back{
+    position:absolute; top:max(20px, env(safe-area-inset-top)); left:20px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:500;
+    color: var(--fg-muted); text-decoration:none;
+    transition: color .2s;
+  }
+  .back:hover{ color: var(--fg); }
+
+  /* ---------- pantalla de selección ---------- */
+  #config{
+    height:100dvh; width:100vw;
+    display:flex; flex-direction:column;
+    align-items:center;
+    text-align:center; padding:max(66px, calc(env(safe-area-inset-top) + 30px)) 24px max(28px, env(safe-area-inset-bottom));
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    overflow-y:auto;
+  }
+  #config h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.8rem; margin:0 0 10px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #config p{
+    font-size:.88rem; color:var(--fg-muted); max-width:320px; margin:0 0 24px;
+  }
+
+  #carpetas{
+    width:100%; max-width:400px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+
+  .card{
+    display:flex; align-items:center; gap:14px;
+    width:100%;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 14px 16px;
+    text-align:left;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0 auto 0 0;
+    width:4px;
+    background: linear-gradient(180deg, var(--coral), var(--teal));
+  }
+  .card:active{
+    transform: scale(.97);
+    box-shadow: 0 8px 24px -8px var(--coral-glow);
+    border-color: var(--coral);
+  }
+  .card .icon{
+    flex: 0 0 auto;
+    width:46px; height:46px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--coral) 16%, transparent);
+  }
+  .card .label{ flex:1; min-width:0; }
+  .card .title{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600; font-size:1.05rem;
+    color: var(--fg);
+  }
+  .card .subtitle{
+    font-size:.82rem; color:var(--fg-muted); margin-top:2px;
+  }
+  .card .chevron{
+    flex:0 0 auto; color:var(--coral); font-size:1.3rem; opacity:.8;
+  }
+
+  #configMsg{
+    margin-top:16px; font-size:.85rem; color:var(--coral); min-height:18px;
+  }
+
+  /* ---------- pantalla de reproducción ---------- */
+  #player{
+    display:none;
+    height:100dvh; width:100vw;
+    flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+    transition: box-shadow .4s ease;
+    cursor:pointer;
+    position:relative;
+  }
+  #player.playing{ box-shadow: inset 0 0 140px var(--teal-glow); }
+  #player.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
+  #player.esperando{ box-shadow: inset 0 0 140px var(--wait-glow); }
+  #player.terminado{ box-shadow: inset 0 0 140px var(--teal-glow); }
+
+  #icono{
+    font-size:100px;
+    line-height:1;
+    margin-bottom:10px;
+  }
+  #nombreAudio{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.6rem; margin-top:15px;
+    max-width:90%;
+    word-break:break-word;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #estadoPlayer{
+    font-size:1.05rem; margin-top:14px; color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  #progreso{
+    font-size:.85rem; margin-top:10px; color: var(--fg-muted); opacity:.8;
+  }
+  #siguiente{
+    margin-top:26px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase;
+    color: var(--teal);
+    padding:12px 20px;
+    border:1px solid var(--card-border); border-radius:12px;
+    background: var(--card);
+    cursor:pointer;
+    transition: border-color .2s ease, color .2s ease;
+  }
+  #siguiente:active{ border-color: var(--teal); }
+  #info{
+    position:absolute; bottom:max(64px, calc(env(safe-area-inset-bottom) + 34px));
+    font-size:.8rem; color: var(--fg-muted); opacity:.7;
+    text-align:center;
+    left:0; right:0;
+  }
+  #salir{
+    position:absolute; bottom:max(20px, env(safe-area-inset-bottom));
+    left:50%; transform:translateX(-50%);
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase;
+    color: var(--coral);
+    padding:10px 18px;
+    border:1px solid var(--card-border); border-radius:12px;
+    background: var(--card);
+    cursor:pointer;
+    transition: border-color .2s ease, color .2s ease;
+  }
+  #salir:active{ border-color: var(--coral); }
+</style>
+</head>
+
+<body>
+
+<div id="config">
+  <a class="back" href="../index.html">← Menú</a>
+  <div class="eyebrow">Reproducción Secuencial de Audio<br>por Tiempo Asignado</div>
+  <h1>Elige los audios</h1>
+  <p>Selecciona una carpeta para reproducir los audios en su secuencia</p>
+
+  <div id="carpetas"></div>
+
+  <div id="configMsg"></div>
+</div>
+
+<div id="player">
+  <div id="icono">▶</div>
+  <div id="nombreAudio"></div>
+  <div id="estadoPlayer"></div>
+  <div id="progreso"></div>
+  <button id="siguiente">⏭ Siguiente audio</button>
+  <div id="info">
+    Toca cualquier parte de la pantalla
+    <br>
+    para Pausar / Reanudar
+  </div>
+  <button id="salir">Salir</button>
+</div>
+
+<audio id="audio" preload="auto"></audio>
+
+<script>
+
+//==============================
+// CONFIGURA AQUÍ TU REPOSITORIO
+//==============================
+const USUARIO = "fredyhb999-dev";
+const REPO    = "Juego-Actividades";
+const RAIZ    = "Audio Tiempo Esp";
+//==============================
+
+const configEl=document.getElementById("config");
+const playerEl=document.getElementById("player");
+const carpetasEl=document.getElementById("carpetas");
+const configMsg=document.getElementById("configMsg");
+const audio=document.getElementById("audio");
+const icono=document.getElementById("icono");
+const nombre=document.getElementById("nombreAudio");
+const estadoPlayer=document.getElementById("estadoPlayer");
+const progreso=document.getElementById("progreso");
+const btnSiguiente=document.getElementById("siguiente");
+const btnSalir=document.getElementById("salir");
+
+let playlists={};          // nombreCarpeta -> [{nombre,url,tempo}]
+let carpetaActual=null;
+let indiceActual=0;
+let intervalo=null;
+let tiempoRestante=0;
+let wakeLock=null;
+let pausadoManual=false;
+let terminado=false;
+
+//---------------------------------------------
+function nombreVisible(n){
+    const p=n.lastIndexOf(".");
+    return p>0 ? n.substring(0,p) : n;
+}
+
+function seg_a_mmss(s){
+    const m=Math.floor(s/60);
+    const ss=s%60;
+    return m+":"+String(ss).padStart(2,"0");
+}
+
+//----------------------------------------------
+// LECTURA DE DATOS
+//----------------------------------------------
+async function api(...segmentos){
+    const ruta=segmentos.map(encodeURIComponent).join("/");
+    const url="https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+ruta;
+    const res=await fetch(url);
+    if(!res.ok){
+        throw new Error("No se pudo leer la carpeta: "+ruta);
+    }
+    return res.json();
+}
+
+async function cargarCarpeta(nombre){
+    const archivos=await api(RAIZ, nombre);
+    const jsonFile=archivos.find(f=>f.type==="file" && /\.json$/i.test(f.name));
+    const lista=[];
+
+    if(jsonFile){
+        const res=await fetch(encodeURIComponent(nombre)+"/"+encodeURIComponent(jsonFile.name));
+        if(res.ok){
+            const secuencia=await res.json();
+            for(const e of secuencia){
+                if(e && e.id){
+                    lista.push({
+                        nombre:e.id,
+                        url:encodeURIComponent(nombre)+"/"+encodeURIComponent(e.id),
+                        tempo:Number(e.tempo)||0
+                    });
+                }
+            }
+        }
+    }
+    return lista;
+}
+
+async function cargarTodo(){
+
+    configMsg.textContent="Cargando carpetas...";
+
+    let carpetas;
+    try{
+        carpetas=await api(RAIZ);
+    }catch(e){
+        configMsg.textContent="Error al cargar. Revisa tu conexión.";
+        return;
+    }
+
+    const carpetasDir=carpetas.filter(c=>c.type==="dir").sort((a,b)=>a.name.localeCompare(b.name,"es"));
+    carpetasEl.innerHTML="";
+
+    for(const carpeta of carpetasDir){
+
+        let lista=[];
+        try{
+            lista=await cargarCarpeta(carpeta.name);
+        }catch(e){ lista=[]; }
+
+        playlists[carpeta.name]=lista;
+
+        const totalMin=lista.reduce((s,it)=>s+it.tempo,0);
+        const subtitulo=lista.length>0
+            ? lista.length+" audios · "+totalMin+" min en total"
+            : "Sin playlist (revisa el JSON)";
+
+        const btn=document.createElement("button");
+        btn.className="card";
+        btn.innerHTML=
+            '<span class="icon">📁</span>'+
+            '<span class="label">'+
+                '<div class="title">'+carpeta.name+'</div>'+
+                '<div class="subtitle">'+subtitulo+'</div>'+
+            '</span>'+
+            '<span class="chevron">›</span>';
+
+        btn.onclick=()=>iniciarSesion(carpeta.name, lista);
+        carpetasEl.appendChild(btn);
+    }
+
+    configMsg.textContent="";
+}
+
+//----------------------------------------------
+// REPRODUCCIÓN
+//----------------------------------------------
+async function mantenerPantalla(){
+    try{
+        if('wakeLock' in navigator){
+            wakeLock=await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener("release",()=>{});
+        }
+    }catch(e){}
+}
+
+document.addEventListener("visibilitychange",async()=>{
+    if(document.visibilityState==="visible" && wakeLock==null){
+        await mantenerPantalla();
+    }
+});
+
+function iniciarSesion(nombre, lista){
+    if(!lista || lista.length===0){
+        configMsg.textContent="Esta carpeta no tiene audios en su JSON.";
+        return;
+    }
+
+    carpetaActual=nombre;
+    indiceActual=0;
+    pausadoManual=false;
+    terminado=false;
+
+    configEl.style.display="none";
+    playerEl.style.display="flex";
+
+    mantenerPantalla();
+    reproducir();
+}
+
+function reproducir(){
+
+    const items=playlists[carpetaActual];
+    const item=items[indiceActual];
+
+    clearInterval(intervalo);
+
+    audio.pause();
+    audio.src=item.url;
+    audio.load();
+
+    audio.play()
+    .then(()=>{
+        playerEl.className="playing";
+        icono.textContent="⏸";
+        nombre.textContent=nombreVisible(item.nombre);
+        estadoPlayer.textContent="Reproduciendo";
+        progreso.textContent="Audio "+(indiceActual+1)+" de "+items.length;
+        btnSiguiente.style.display="";
+    })
+    .catch(()=>{
+        avanzarSinEspera();
+    });
+}
+
+function onAudioTerminado(){
+
+    if(terminado) return;
+
+    const items=playlists[carpetaActual];
+    const tempo=items[indiceActual].tempo;
+
+    if(tempo<=0){
+        terminarSesion();
+        return;
+    }
+
+    playerEl.className="esperando";
+    icono.textContent="⏳";
+    estadoPlayer.textContent="Siguiente en "+tempo+" min";
+    progreso.textContent="Audio "+(indiceActual+1)+" de "+items.length;
+
+    tiempoRestante=tempo*60;
+    clearInterval(intervalo);
+    intervalo=setInterval(()=>{
+        tiempoRestante--;
+        if(tiempoRestante<=0){
+            clearInterval(intervalo);
+            indiceActual++;
+            reproducir();
+        }else{
+            estadoPlayer.textContent="Siguiente en "+seg_a_mmss(tiempoRestante);
+        }
+    },1000);
+}
+
+function avanzarSinEspera(){
+    if(terminado) return;
+    const items=playlists[carpetaActual];
+    if(indiceActual+1<items.length){
+        indiceActual++;
+        reproducir();
+    }else{
+        terminarSesion();
+    }
+}
+
+function terminarSesion(){
+    terminado=true;
+    clearInterval(intervalo);
+    playerEl.className="terminado";
+    icono.textContent="🏁";
+    nombre.textContent=carpetaActual;
+    estadoPlayer.textContent="Sesión terminada. Toca para volver al menú.";
+    progreso.textContent="";
+    btnSiguiente.style.display="none";
+}
+
+function saltarAlSiguiente(){
+
+    if(terminado || !carpetaActual) return;
+
+    const items=playlists[carpetaActual];
+    clearInterval(intervalo);
+    audio.pause();
+    pausadoManual=false;
+
+    if(indiceActual+1>=items.length){
+        terminarSesion();
+    }else{
+        indiceActual++;
+        reproducir();
+    }
+}
+
+function volverAlMenu(){
+    clearInterval(intervalo);
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    terminado=false;
+    playerEl.className="";
+    playerEl.style.display="none";
+    configEl.style.display="flex";
+}
+
+//----------------------------------------------
+// EVENTOS
+//----------------------------------------------
+audio.onended=()=>{
+    if(!pausadoManual && !terminado){
+        onAudioTerminado();
+    }
+};
+
+audio.onerror=()=>{
+    if(!terminado){
+        avanzarSinEspera();
+    }
+};
+
+playerEl.onclick=()=>{
+
+    if(terminado){
+        volverAlMenu();
+        return;
+    }
+
+    if(playerEl.className==="esperando"){
+        return; // mientras espera el próximo audio, no hace nada al tocar
+    }
+
+    if(audio.paused){
+        audio.play();
+        playerEl.className="playing";
+        icono.textContent="⏸";
+        estadoPlayer.textContent="Reproduciendo";
+        pausadoManual=false;
+    }else{
+        audio.pause();
+        playerEl.className="paused";
+        icono.textContent="▶";
+        estadoPlayer.textContent="Pausado";
+        pausadoManual=true;
+    }
+};
+
+btnSiguiente.onclick=(e)=>{
+    e.stopPropagation();
+    saltarAlSiguiente();
+};
+
+btnSalir.onclick=(e)=>{
+    e.stopPropagation();
+    volverAlMenu();
+};
+
+cargarTodo();
+
+</script>
+
+</body>
+</html>
