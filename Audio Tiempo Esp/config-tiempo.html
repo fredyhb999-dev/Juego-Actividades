@@ -423,7 +423,7 @@ async function guardar(){
       avisar($("msgEdit"),"No se pudo guardar (error "+r.status+").");
     }else{
       shaActual=(r.data.content&&r.data.content.sha)||shaActual;
-      avisar($("msgEdit"),"Secuencia guardada ✓",true);
+      avisar($("msgEdit"),"Secuencia guardada ✓ Espera 1-2 min a que se apliquen los cambios.",true);
     }
   }catch(e){
     avisar($("msgEdit"),"No se pudo guardar. Revisa tu conexión.");

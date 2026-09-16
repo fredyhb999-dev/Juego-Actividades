@@ -123,6 +123,19 @@
     margin-top:16px; font-size:.85rem; color:var(--coral); min-height:18px;
   }
 
+  #recargar{
+    margin-top:16px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase;
+    color: var(--fg-muted);
+    padding:10px 18px;
+    border:1px solid var(--card-border); border-radius:12px;
+    background: var(--card);
+    cursor:pointer;
+  }
+  #recargar:active{ border-color: var(--teal); color:var(--fg); }
+
   /* ---------- pantalla de reproducción ---------- */
   #player{
     display:none;
@@ -210,6 +223,8 @@
 
   <div id="carpetas"></div>
 
+  <button id="recargar">↻ Recargar</button>
+
   <div id="configMsg"></div>
 </div>
 
@@ -252,6 +267,7 @@ const btnSiguiente=document.getElementById("siguiente");
 const btnSalir=document.getElementById("salir");
 
 let playlists={};          // nombreCarpeta -> [{nombre,url,tempo}]
+let pendientes={};         // nombreCarpeta -> true si el JSON existe pero aún no se publica
 let carpetaActual=null;
 let indiceActual=0;
 let intervalo=null;
@@ -278,7 +294,7 @@ function seg_a_mmss(s){
 async function api(...segmentos){
     const ruta=segmentos.map(encodeURIComponent).join("/");
     const url="https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+ruta;
-    const res=await fetch(url);
+    const res=await fetch(url,{cache:"no-store"});
     if(!res.ok){
         throw new Error("No se pudo leer la carpeta: "+ruta);
     }
@@ -291,7 +307,7 @@ async function cargarCarpeta(nombre){
     const lista=[];
 
     if(jsonFile){
-        const res=await fetch(encodeURIComponent(nombre)+"/"+encodeURIComponent(jsonFile.name));
+        const res=await fetch(encodeURIComponent(nombre)+"/"+encodeURIComponent(jsonFile.name),{cache:"no-store"});
         if(res.ok){
             const secuencia=await res.json();
             for(const e of secuencia){
@@ -303,6 +319,9 @@ async function cargarCarpeta(nombre){
                     });
                 }
             }
+        }else{
+            // El JSON ya existe en el repo pero GitHub aún no lo publica (tarda 1-2 min)
+            pendientes[nombre]=true;
         }
     }
     return lista;
@@ -354,6 +373,14 @@ async function cargarTodo(){
     configMsg.textContent="";
 }
 
+function recargar(){
+    playlists={};
+    pendientes={};
+    carpetasEl.innerHTML="";
+    configMsg.textContent="";
+    cargarTodo();
+}
+
 //----------------------------------------------
 // REPRODUCCIÓN
 //----------------------------------------------
@@ -374,7 +401,9 @@ document.addEventListener("visibilitychange",async()=>{
 
 function iniciarSesion(nombre, lista){
     if(!lista || lista.length===0){
-        configMsg.textContent="Esta carpeta aún no tiene secuencia. Créala en ⚙️ Configuración.";
+        configMsg.textContent=pendientes[nombre]
+            ? "Secuencia recién guardada: espera 1-2 min a que se apliquen los cambios y toca de nuevo."
+            : "Esta carpeta aún no tiene secuencia. Créala en ⚙️ Configuración.";
         return;
     }
 
@@ -546,6 +575,8 @@ btnSalir.onclick=(e)=>{
     e.stopPropagation();
     volverAlMenu();
 };
+
+document.getElementById("recargar").onclick=()=>recargar();
 
 cargarTodo();
 
