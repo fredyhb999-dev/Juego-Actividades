@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Configurar secuencias</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --rojo: #ff5c7a;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; min-height:100%; width:100%;
+    color:var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
+  }
+  body{
+    min-height:100dvh; display:flex; flex-direction:column; align-items:center;
+    padding:max(66px, calc(env(safe-area-inset-top) + 30px)) 20px max(28px, env(safe-area-inset-bottom));
+    position:relative;
+  }
+
+  .back{
+    position:absolute; top:max(20px, env(safe-area-inset-top)); left:20px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:500;
+    color: var(--fg-muted); text-decoration:none;
+  }
+  .back:hover{ color: var(--fg); }
+
+  .eyebrow{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; line-height:1.7;
+    color: var(--fg-muted); margin-bottom:10px; text-align:center;
+  }
+  h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.7rem; margin:0 0 8px; text-align:center;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  h2{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:1.1rem; margin:26px 0 12px; width:100%; max-width:520px;
+  }
+  p.desc, .ayuda{
+    font-size:.88rem; color:var(--fg-muted); max-width:420px; margin:0 0 18px; text-align:center;
+  }
+  .ayuda{ text-align:left; font-size:.85rem; }
+  .ayuda ol{ margin:8px 0; padding-left:22px; }
+  .ayuda li{ margin-bottom:6px; }
+  .ayuda code{
+    font-size:.78rem; background:var(--bg-2); border:1px solid var(--card-border);
+    border-radius:6px; padding:1px 6px; word-break:break-all;
+  }
+
+  .fila{ display:flex; gap:10px; width:100%; max-width:420px; }
+  input[type=text], input[type=password], input[type=number], select{
+    font-family:'Inter', sans-serif; flex:1; min-width:0;
+    border-radius:12px; border:1px solid var(--card-border);
+    background: var(--card); color:var(--fg);
+    padding:14px; font-size:1rem;
+  }
+  input[type=number]{ max-width:110px; flex:0 0 110px; }
+  button{
+    font-family:'Chakra Petch', sans-serif; font-weight:700; letter-spacing:.04em;
+    border:none; border-radius:14px; cursor:pointer; padding:14px 18px;
+    transition: transform .15s ease, opacity .2s ease;
+    white-space:nowrap;
+  }
+  button:active{ transform: scale(.97); }
+  button:disabled{ opacity:.4; }
+  .btnPri{ color: var(--bg); background: linear-gradient(90deg, var(--coral), var(--teal)); }
+  .btnSec{ background: var(--card); color: var(--fg); border:1px solid var(--card-border); }
+  .btnMini{ padding:8px 10px; font-size:.9rem; border-radius:10px; background:var(--bg-2); color:var(--fg); border:1px solid var(--card-border); }
+  .btnTxt{ background:none; color:var(--fg-muted); text-decoration:underline; padding:8px; font-size:.8rem; font-weight:500; }
+
+  #msg, #msgEdit{
+    min-height:20px; font-size:.85rem; color:var(--rojo);
+    margin:10px 0 6px; text-align:center; max-width:420px;
+  }
+  #msg.ok, #msgEdit.ok{ color: var(--teal); }
+
+  #listaCarpetas, #listaItems, #listaSueltos{ width:100%; max-width:520px; display:flex; flex-direction:column; gap:10px; }
+
+  .itemCarp{
+    display:flex; align-items:center; gap:12px; width:100%;
+    background:var(--card); border:1px solid var(--card-border);
+    border-radius:14px; padding:14px; cursor:pointer; color:var(--fg); text-align:left;
+  }
+  .itemCarp:active{ transform: scale(.98); border-color:var(--teal); }
+  .itemCarp .t{ flex:1; min-width:0; font-family:'Chakra Petch', sans-serif; font-weight:600; }
+  .itemCarp .s{ display:block; font-family:'Inter', sans-serif; font-weight:400; font-size:.8rem; color:var(--fg-muted); margin-top:2px; }
+  .itemCarp .chev{ color:var(--coral); font-size:1.3rem; }
+
+  .itemAudio{
+    background:var(--card); border:1px solid var(--card-border);
+    border-radius:12px; padding:12px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .itemAudio .top{ display:flex; align-items:center; gap:10px; }
+  .itemAudio .num{
+    flex:0 0 auto; width:28px; height:28px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg-2); border:1px solid var(--card-border);
+    font-family:'Chakra Petch', sans-serif; font-size:.8rem;
+  }
+  .itemAudio .nom{ flex:1; min-width:0; font-size:.9rem; word-break:break-word; }
+  .itemAudio .ctl{ display:flex; gap:8px; align-items:center; }
+  .itemAudio .ctl input{ padding:10px; }
+
+  .suelto{
+    display:flex; align-items:center; gap:10px;
+    background:rgba(32,25,51,.5); border:1px dashed var(--card-border);
+    border-radius:12px; padding:10px 12px; font-size:.85rem;
+  }
+  .suelto .n{ flex:1; min-width:0; word-break:break-word; }
+
+  #pantallaCarpetas, #pantallaEditar{ display:flex; flex-direction:column; align-items:center; width:100%; }
+  #pantallaEditar, #pantallaLlave{ display:none; width:100%; flex-direction:column; align-items:center; }
+  #totalEdit{ font-size:.85rem; color:var(--fg-muted); margin-top:12px; }
+  .nota{ font-size:.78rem; color:var(--fg-muted); max-width:420px; text-align:center; margin-top:10px; }
+</style>
+</head>
+<body>
+
+<a class="back" href="Rep Tiempo Esp.html">← Reproductor</a>
+
+<div class="eyebrow">Reproducción Secuencial de Audio<br>por Tiempo Asignado</div>
+<h1>Configurar secuencias</h1>
+
+<!-- ============ PANTALLA: LLAVE ============ -->
+<div id="pantallaLlave">
+  <p class="desc">Para guardar secuencias en el repo, escribe tu llave de GitHub (se queda solo en este celular).</p>
+  <div class="fila">
+    <input id="inputLlave" type="password" placeholder="Llave de GitHub" autocomplete="off">
+    <button id="btnLlave" class="btnPri">Guardar</button>
+  </div>
+  <div id="msgLlave" style="min-height:20px;font-size:.85rem;color:var(--rojo);margin:10px 0;"></div>
+  <div class="ayuda">
+    Cómo crear tu llave:
+    <ol>
+      <li>En la compu entra a <code>github.com → tu foto → Settings → Developer settings → Personal access tokens → Fine-grained tokens</code>.</li>
+      <li><b>Generate new token</b>, ponle nombre (ej. <code>app-tiempo</code>).</li>
+      <li>En <b>Repository access</b> elige <b>Only select repositories</b> y marca <code>Juego-Actividades</code>.</li>
+      <li>En <b>Permissions → Contents</b> elige <b>Read and write</b>.</li>
+      <li><b>Generate token</b>, cópiala y pégala aquí.</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ PANTALLA: CARPETAS ============ -->
+<div id="pantallaCarpetas" style="display:none;">
+  <p class="desc">Elige una carpeta para ver o crear su secuencia (.json).</p>
+  <div id="msg"></div>
+  <div id="listaCarpetas"></div>
+  <button id="btnOlvidar" class="btnTxt">Olvidar mi llave en este celular</button>
+</div>
+
+<!-- ============ PANTALLA: EDITAR ============ -->
+<div id="pantallaEditar">
+  <h1 id="tituloEdit" style="font-size:1.4rem;"></h1>
+  <p class="desc" id="subEdit"></p>
+
+  <div id="listaItems"></div>
+  <div id="totalEdit"></div>
+
+  <h2>Archivos sin asignar</h2>
+  <div id="listaSueltos"></div>
+
+  <div id="msgEdit"></div>
+
+  <div class="fila" style="margin-top:6px;">
+    <button id="btnGuardar" class="btnPri" style="flex:1;">Guardar secuencia</button>
+  </div>
+  <div class="fila" style="margin-top:10px;">
+    <button id="btnVolver" class="btnSec" style="flex:1;">← Carpetas</button>
+  </div>
+  <div class="nota">0 = sin espera antes del siguiente audio. El último normalmente lleva 0.</div>
+</div>
+
+<script>
+//==============================
+const USUARIO = "fredyhb999-dev";
+const REPO    = "Juego-Actividades";
+const RAIZ    = "Audio Tiempo Esp";
+const CLAVE_TOKEN = "tiempo_gh_token";
+//==============================
+
+const $ = id=>document.getElementById(id);
+const pantallaLlave=$("pantallaLlave"), pantallaCarpetas=$("pantallaCarpetas"), pantallaEditar=$("pantallaEditar");
+
+let token=null;
+let carpetaActual=null;
+let archivosRepo=[];   // .mp4 de la carpeta
+let secuencia=[];      // [{id, tempo}]
+let shaActual=null;    // sha del JSON existente (null si es nuevo)
+
+function avisar(el, t, ok){ el.textContent=t||""; el.className=ok?"ok":""; }
+function totalMin(){ return secuencia.reduce((s,it)=>s+(Number(it.tempo)||0),0); }
+function esAudio(n){ return /\.(mp3|mp4|m4a|aac|wav|ogg)$/i.test(n||""); }
+function ordenNatural(a,b){ return a.localeCompare(b,"es",{numeric:true}); }
+
+// ---------- GitHub API ----------
+function headersAuth(){
+  return {
+    "Accept": "application/vnd.github+json",
+    "Content-Type": "application/json",
+    "Authorization": "Bearer "+token
+  };
+}
+async function apiPublica(...segmentos){
+  const ruta=segmentos.map(encodeURIComponent).join("/");
+  const cab={ "Accept": "application/vnd.github+json" };
+  if(token) cab["Authorization"]="Bearer "+token;
+  const res=await fetch("https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+ruta, { headers:cab });
+  if(!res.ok) throw new Error("carpeta "+ruta);
+  return res.json();
+}
+async function apiEscribir(path, metodo, cuerpo){
+  const res=await fetch(
+    "https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+path.split("/").map(encodeURIComponent).join("/"),
+    { method:metodo, headers:headersAuth(), body:cuerpo?JSON.stringify(cuerpo):undefined }
+  );
+  const data=await res.json().catch(()=>({}));
+  return { ok:res.ok, status:res.status, data:data };
+}
+function b64encodeUtf8(s){
+  const bytes=new TextEncoder().encode(s);
+  let bin="";
+  bytes.forEach(b=>{ bin+=String.fromCharCode(b); });
+  return btoa(bin);
+}
+function b64decodeUtf8(b64){
+  const bin=atob(b64.replace(/\n/g,""));
+  const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+function mostrar(id){
+  [pantallaLlave,pantallaCarpetas,pantallaEditar].forEach(p=>{ p.style.display="none"; });
+  $(id).style.display="flex";
+}
+
+// ---------- Llave ----------
+function pedirLlave(){
+  token=null;
+  $("inputLlave").value="";
+  mostrar("pantallaLlave");
+}
+async function guardarLlave(){
+  const t=$("inputLlave").value.trim();
+  if(!t){ $("msgLlave").textContent="Escribe tu llave."; return; }
+  token=t;
+  try{
+    const r=await apiEscribir(RAIZ,"GET");
+    if(r.status===401||r.status===403){
+      $("msgLlave").textContent="Llave inválida o sin permiso. Revísala.";
+      token=null;
+      return;
+    }
+    localStorage.setItem(CLAVE_TOKEN,t);
+    entrar();
+  }catch(e){
+    $("msgLlave").textContent="No se pudo verificar. Revisa tu conexión.";
+    token=null;
+  }
+}
+function olvidar(){
+  localStorage.removeItem(CLAVE_TOKEN);
+  pedirLlave();
+}
+
+// ---------- Carpetas ----------
+async function entrar(){
+  mostrar("pantallaCarpetas");
+  avisar($("msg"),"Cargando carpetas…",true);
+  $("listaCarpetas").innerHTML="";
+  try{
+    const datos=await apiPublica(RAIZ);
+    const dirs=datos.filter(c=>c.type==="dir").sort((a,b)=>a.name.localeCompare(b.name,"es"));
+    $("listaCarpetas").innerHTML="";
+    if(dirs.length===0) avisar($("msg"),"No hay carpetas.");
+    else avisar($("msg"),"",false);
+    dirs.forEach(d=>{
+      const b=document.createElement("button");
+      b.className="itemCarp";
+      b.innerHTML='<span class="t">'+d.name+'<span class="s" data-sub>Cargando…</span></span><span class="chev">›</span>';
+      b.onclick=()=>abrirCarpeta(d.name);
+      $("listaCarpetas").appendChild(b);
+      marcarJson(d.name, b.querySelector("[data-sub]"));
+    });
+  }catch(e){
+    avisar($("msg"),"No se pudo leer el repo. Revisa tu conexión.");
+  }
+}
+async function marcarJson(carpeta, el){
+  try{
+    const datos=await apiPublica(RAIZ, carpeta);
+    const json=datos.find(f=>f.type==="file" && /\.json$/i.test(f.name));
+    const na=datos.filter(f=>f.type==="file" && esAudio(f.name)).length;
+    el.textContent=json ? ("✓ secuencia "+json.name+" · "+na+" audios") : ("sin secuencia · "+na+" audios");
+  }catch(e){
+    el.textContent="no se pudo leer";
+  }
+}
+
+// ---------- Editor ----------
+async function abrirCarpeta(nombre){
+  carpetaActual=nombre;
+  secuencia=[];
+  shaActual=null;
+  archivosRepo=[];
+  $("tituloEdit").textContent=nombre;
+  mostrar("pantallaEditar");
+  avisar($("msgEdit"),"Cargando…",true);
+  $("listaItems").innerHTML="";
+  $("listaSueltos").innerHTML="";
+  try{
+    const datos=await apiPublica(RAIZ, nombre);
+    archivosRepo=datos.filter(f=>f.type==="file" && esAudio(f.name)).map(f=>f.name);
+    const json=datos.find(f=>f.type==="file" && /\.json$/i.test(f.name));
+    if(json){
+      const r=await apiEscribir(RAIZ+"/"+nombre+"/"+json.name,"GET");
+      if(!r.ok) throw new Error("json");
+      shaActual=r.data.sha;
+      const arr=JSON.parse(b64decodeUtf8(r.data.content));
+      secuencia=(Array.isArray(arr)?arr:[]).filter(e=>e&&e.id).map(e=>({ id:e.id, tempo:Number(e.tempo)||0 }));
+      $("subEdit").textContent="Editando "+json.name+". Reordena, cambia tiempos o agrega archivos.";
+    }else{
+      $("subEdit").textContent="Sin secuencia. Se arma desde los archivos con espera inicial de 2 min.";
+      secuencia=archivosRepo.slice().sort(ordenNatural).map(id=>({ id:id, tempo:2 }));
+    }
+    avisar($("msgEdit"),"",false);
+    pintar();
+  }catch(e){
+    avisar($("msgEdit"),"No se pudo leer la carpeta. Revisa tu conexión.");
+  }
+}
+
+function pintar(){
+  const enSec=new Set(secuencia.map(e=>e.id));
+  const box=$("listaItems");
+  box.innerHTML="";
+  secuencia.forEach((it,i)=>{
+    const d=document.createElement("div");
+    d.className="itemAudio";
+    const top=document.createElement("div");
+    top.className="top";
+    const num=document.createElement("div");
+    num.className="num"; num.textContent=(i+1);
+    const nom=document.createElement("div");
+    nom.className="nom"; nom.textContent=it.id;
+    top.appendChild(num); top.appendChild(nom);
+    const ctl=document.createElement("div");
+    ctl.className="ctl";
+    const t=document.createElement("input");
+    t.type="number"; t.min="0"; t.step="1"; t.value=Number(it.tempo)||0; t.title="Minutos de espera";
+    t.onchange=()=>{ secuencia[i].tempo=Math.max(0,parseInt(t.value,10)||0); pintarTotal(); };
+    const up=document.createElement("button"); up.className="btnMini"; up.textContent="↑";
+    up.onclick=()=>{ if(i>0){ const a=secuencia; [a[i-1],a[i]]=[a[i],a[i-1]]; pintar(); } };
+    const dn=document.createElement("button"); dn.className="btnMini"; dn.textContent="↓";
+    dn.onclick=()=>{ if(i<secuencia.length-1){ const a=secuencia; [a[i+1],a[i]]=[a[i],a[i+1]]; pintar(); } };
+    const del=document.createElement("button"); del.className="btnMini"; del.textContent="✕";
+    del.onclick=()=>{ secuencia.splice(i,1); pintar(); };
+    ctl.appendChild(t); ctl.appendChild(up); ctl.appendChild(dn); ctl.appendChild(del);
+    d.appendChild(top); d.appendChild(ctl);
+    box.appendChild(d);
+  });
+  const sueltos=archivosRepo.filter(a=>!enSec.has(a)).sort(ordenNatural);
+  const bs=$("listaSueltos");
+  bs.innerHTML="";
+  if(sueltos.length===0) bs.innerHTML='<p class="desc" style="margin:0;">Todos los archivos ya están en la secuencia.</p>';
+  sueltos.forEach(a=>{
+    const d=document.createElement("div");
+    d.className="suelto";
+    const n=document.createElement("div");
+    n.className="n"; n.textContent=a;
+    const b=document.createElement("button");
+    b.className="btnMini"; b.textContent="＋ Agregar";
+    b.onclick=()=>{ secuencia.push({ id:a, tempo:2 }); pintar(); };
+    d.appendChild(n); d.appendChild(b);
+    bs.appendChild(d);
+  });
+  pintarTotal();
+}
+function pintarTotal(){
+  $("totalEdit").textContent=secuencia.length+" audios · "+totalMin()+" min en total";
+}
+
+async function guardar(){
+  if(!carpetaActual) return;
+  if(secuencia.length===0){ avisar($("msgEdit"),"La secuencia está vacía."); return; }
+  const nombreArchivo=carpetaActual+".json";
+  const texto=JSON.stringify(secuencia.map(e=>({ id:e.id, tempo:Number(e.tempo)||0 })),null,2)+"\n";
+  const cuerpo={ message:"Actualiza secuencia "+nombreArchivo+" desde la app", content:b64encodeUtf8(texto) };
+  if(shaActual) cuerpo.sha=shaActual;
+  $("btnGuardar").disabled=true;
+  avisar($("msgEdit"),"Guardando…",true);
+  try{
+    const r=await apiEscribir(RAIZ+"/"+carpetaActual+"/"+nombreArchivo,"PUT",cuerpo);
+    if(r.status===401||r.status===403){
+      avisar($("msgEdit"),"Llave inválida o sin permiso de escritura.");
+    }else if(r.status===422){
+      avisar($("msgEdit"),"Alguien más lo modificó. Vuelve a entrar a la carpeta.");
+    }else if(!r.ok){
+      avisar($("msgEdit"),"No se pudo guardar (error "+r.status+").");
+    }else{
+      shaActual=(r.data.content&&r.data.content.sha)||shaActual;
+      avisar($("msgEdit"),"Secuencia guardada ✓",true);
+    }
+  }catch(e){
+    avisar($("msgEdit"),"No se pudo guardar. Revisa tu conexión.");
+  }
+  $("btnGuardar").disabled=false;
+}
+
+// ---------- eventos ----------
+$("btnLlave").onclick=guardarLlave;
+$("inputLlave").addEventListener("keydown",e=>{ if(e.key==="Enter") guardarLlave(); });
+$("btnOlvidar").onclick=olvidar;
+$("btnGuardar").onclick=guardar;
+$("btnVolver").onclick=()=>{ carpetaActual=null; entrar(); };
+
+// ---------- inicio ----------
+token=localStorage.getItem(CLAVE_TOKEN);
+if(token){ entrar(); }else{ pedirLlave(); }
+</script>
+
+</body>
+</html>

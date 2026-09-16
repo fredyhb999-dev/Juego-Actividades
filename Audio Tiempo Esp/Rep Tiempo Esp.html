@@ -203,6 +203,7 @@
 
 <div id="config">
   <a class="back" href="../index.html">← Menú</a>
+  <a class="back" href="config-tiempo.html" style="left:auto;right:20px;" title="Configurar secuencias">⚙️</a>
   <div class="eyebrow">Reproducción Secuencial de Audio<br>por Tiempo Asignado</div>
   <h1>Elige los audios</h1>
   <p>Selecciona una carpeta para reproducir los audios en su secuencia</p>
@@ -373,7 +374,7 @@ document.addEventListener("visibilitychange",async()=>{
 
 function iniciarSesion(nombre, lista){
     if(!lista || lista.length===0){
-        configMsg.textContent="Esta carpeta no tiene audios en su JSON.";
+        configMsg.textContent="Esta carpeta aún no tiene secuencia. Créala en ⚙️ Configuración.";
         return;
     }
 
