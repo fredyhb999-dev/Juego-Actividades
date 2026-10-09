@@ -37,14 +37,6 @@
     position:relative;
   }
 
-  .back{
-    position:absolute; top:max(20px, env(safe-area-inset-top)); left:20px;
-    font-family:'Chakra Petch', sans-serif;
-    font-size:.85rem; font-weight:500;
-    color: var(--fg-muted); text-decoration:none;
-  }
-  .back:hover{ color: var(--fg); }
-
   .eyebrow{
     font-family:'Chakra Petch', sans-serif;
     font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; line-height:1.7;
@@ -140,8 +132,6 @@
 </style>
 </head>
 <body>
-
-<a class="back" href="Rep Tiempo Esp.html">← Reproductor</a>
 
 <div class="eyebrow">Reproducción Secuencial de Audio<br>por Tiempo Asignado</div>
 <h1>Configurar secuencias</h1>
@@ -443,5 +433,6 @@ token=localStorage.getItem(CLAVE_TOKEN);
 if(token){ entrar(); }else{ pedirLlave(); }
 </script>
 
+<script src="../js/volver.js" data-padre="Rep Tiempo Esp.html"></script>
 </body>
 </html>
