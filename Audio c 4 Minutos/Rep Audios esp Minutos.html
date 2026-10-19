@@ -110,12 +110,20 @@
   #player.playing{ box-shadow: inset 0 0 140px var(--teal-glow); }
   #player.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
   #player.esperando{ box-shadow: inset 0 0 140px var(--wait-glow); }
+  #player.terminado{ box-shadow: inset 0 0 140px var(--coral-glow); }
 
   #icono{
     font-size:100px;
     line-height:1;
     margin-bottom:10px;
   }
+  #categoriaAudio{
+    display:none;
+    margin-top:14px; padding:5px 14px; border-radius:20px;
+    font-size:.72rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    background: rgba(47,217,199,.15); color: var(--teal);
+  }
+  #categoriaAudio.visible{ display:block; }
   #nombreAudio{
     font-family:'Chakra Petch', sans-serif;
     font-weight:700; font-size:1.7rem; margin-top:15px;
@@ -129,11 +137,34 @@
   }
   #estadoPlayer{
     font-size:1.05rem; margin-top:14px; color: var(--fg-muted);
+    font-variant-numeric: tabular-nums;
   }
+  #contador{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:3.2rem; margin-top:12px;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #contador.hidden{ display:none; }
+  #siguiente{
+    margin-top:26px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase;
+    color: var(--teal);
+    padding:12px 20px;
+    border:1px solid var(--card-border); border-radius:12px;
+    background: var(--card);
+    cursor:pointer;
+    transition: border-color .2s ease, color .2s ease;
+  }
+  #siguiente:active{ border-color: var(--teal); }
   #info{
-    position:absolute; bottom:max(26px, env(safe-area-inset-bottom));
+    position:absolute; bottom:max(74px, calc(env(safe-area-inset-bottom) + 40px));
     font-size:.8rem; color: var(--fg-muted); opacity:.7;
     text-align:center;
+    left:0; right:0;
   }
 </style>
 </head>
@@ -146,7 +177,7 @@
 
   <div class="campo">
     <label for="minutos">Minutos entre cada audio</label>
-    <input id="minutos" type="number" min="1" step="1" value="4" inputmode="numeric">
+    <input id="minutos" type="number" min="0.5" step="0.5" value="4" inputmode="decimal">
   </div>
 
   <div class="campo">
@@ -160,8 +191,11 @@
 
 <div id="player">
   <div id="icono">⏸</div>
+  <div id="categoriaAudio"></div>
   <div id="nombreAudio"></div>
   <div id="estadoPlayer"></div>
+  <div id="contador" class="hidden"></div>
+  <button id="siguiente">⏭ Siguiente audio</button>
   <div id="info">
     Toca cualquier parte de la pantalla
     <br>
@@ -192,8 +226,13 @@ const configMsg=document.getElementById("configMsg");
 const player=document.getElementById("player");
 const audio=document.getElementById("audio");
 const icono=document.getElementById("icono");
+const categoriaAudio=document.getElementById("categoriaAudio");
 const nombre=document.getElementById("nombreAudio");
 const estadoPlayer=document.getElementById("estadoPlayer");
+const contador=document.getElementById("contador");
+const btnSiguiente=document.getElementById("siguiente");
+
+const CLAVE_CFG="audio_c4minutos_cfg";
 
 let listaAvanzado=[];
 let listaExperto=[];
@@ -207,7 +246,12 @@ let pasoCiclo=0;   // cuántos "Avanzado" van reproducidos desde el último "Exp
 let minutosEspera=4;
 let wakeLock=null;
 let pausadoManual=false;
-let temporizador=null;
+let intervalo=null;
+let tiempoRestante=0;
+let itemActual=null;
+let fallosConsecutivos=0;
+let falloContado=false;
+let detenido=false;
 
 const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 
@@ -219,6 +263,43 @@ function esAudio(nombreArchivo){
 function nombreVisible(n){
     const p=n.lastIndexOf(".");
     return p>0 ? n.substring(0,p) : n;
+}
+
+// Los archivos de Principiante traen prefijo de secuencia (001 5 T.mp3).
+// Se quita SOLO en esa carpeta para no romper nombres como "10 C" o "20 T".
+function nombreMostrar(item){
+    if(item.categoria==="Principiante"){
+        return item.nombre.replace(/^\d+\s+/,"");
+    }
+    return item.nombre;
+}
+
+function seg_a_mmss(s){
+    const m=Math.floor(s/60);
+    const ss=s%60;
+    return m+":"+String(ss).padStart(2,"0");
+}
+
+//---------------------------------------------
+// La configuración se recuerda entre visitas
+//---------------------------------------------
+function cargarCfg(){
+    try{
+        const raw=localStorage.getItem(CLAVE_CFG);
+        if(!raw) return;
+        const c=JSON.parse(raw);
+        if(c.minutos) minutosInput.value=c.minutos;
+        if(c.proporcion) proporcionInput.value=c.proporcion;
+    }catch(e){}
+}
+
+function guardarCfg(){
+    try{
+        localStorage.setItem(CLAVE_CFG,JSON.stringify({
+            minutos:minutosInput.value,
+            proporcion:proporcionInput.value
+        }));
+    }catch(e){}
 }
 
 //---------------------------------------------
@@ -297,7 +378,8 @@ function sacarDeBaraja(categoria){
 function siguienteAudio(){
 
     if(colaPrincipiante.length>0){
-        return colaPrincipiante.shift();
+        const item=colaPrincipiante.shift();
+        return Object.assign({},item,{categoria:"Principiante"});
     }
 
     const hayAvanzado=listaAvanzado.length>0;
@@ -319,11 +401,22 @@ function siguienteAudio(){
         categoria="experto";
     }
 
-    return sacarDeBaraja(categoria);
+    const item=sacarDeBaraja(categoria);
+    return Object.assign({},item,{
+        categoria: categoria==="avanzado" ? "Avanzado" : "Experto"
+    });
+
 }
 
 //---------------------------------------------
 function reproducir(item){
+
+    if(detenido) return;
+
+    itemActual=item;
+    falloContado=false;
+    clearInterval(intervalo);
+    intervalo=null;
 
     audio.pause();
     audio.src=item.url;
@@ -331,43 +424,144 @@ function reproducir(item){
 
     audio.play()
     .then(()=>{
+        fallosConsecutivos=0;
         player.className="playing";
         icono.textContent="⏸";
-        nombre.textContent=item.nombre;
+        categoriaAudio.textContent=item.categoria || "";
+        categoriaAudio.className="visible";
+        nombre.textContent=nombreMostrar(item);
         estadoPlayer.textContent="Reproduciendo";
+        contador.className="hidden";
+        contador.textContent="";
+        btnSiguiente.style.display="";
     })
     .catch(()=>{
-        // Si un audio falla, intenta con el siguiente
-        programarSiguiente(0);
+        falloDeAudio();
     });
 
 }
 
+function falloDeAudio(){
+
+    // play() y onerror pueden avisar del mismo fallo: se cuenta una sola vez
+    if(falloContado || detenido) return;
+    falloContado=true;
+    fallosConsecutivos++;
+
+    if(fallosConsecutivos>=3){
+        detener("No se pudieron reproducir 3 audios seguidos. Revisa tu conexión.");
+        return;
+    }
+
+    programarSiguiente(0);
+}
+
+function avanzar(){
+    if(detenido) return;
+    const item=siguienteAudio();
+    if(!item){
+        detener("No quedan audios disponibles.");
+        return;
+    }
+    reproducir(item);
+}
+
 function programarSiguiente(minutos){
+
+    if(detenido) return;
+
     player.className="esperando";
     icono.textContent="⏳";
-    estadoPlayer.textContent="Siguiente audio en unos momentos...";
-    clearTimeout(temporizador);
-    temporizador=setTimeout(()=>{
-        if(!pausadoManual){
-            const item=siguienteAudio();
-            reproducir(item);
+    btnSiguiente.style.display="";
+
+    tiempoRestante=Math.max(0,Math.round(minutos*60));
+    clearInterval(intervalo);
+    intervalo=null;
+
+    // Sin espera: pequeño retardo para que el error sea visible
+    if(tiempoRestante<=0){
+        estadoPlayer.textContent="Buscando el siguiente audio...";
+        contador.className="hidden";
+        intervalo=setInterval(()=>{
+            clearInterval(intervalo);
+            intervalo=null;
+            avanzar();
+        },1200);
+        return;
+    }
+
+    contador.className="";
+    contador.textContent=seg_a_mmss(tiempoRestante);
+    estadoPlayer.textContent="Siguiente audio en";
+
+    intervalo=setInterval(()=>{
+        tiempoRestante--;
+        if(tiempoRestante<=0){
+            clearInterval(intervalo);
+            intervalo=null;
+            contador.className="hidden";
+            avanzar();
+        }else{
+            contador.textContent=seg_a_mmss(tiempoRestante);
         }
-    },minutos*60*1000);
+    },1000);
+}
+
+function saltarAlSiguiente(){
+    if(detenido) return;
+    clearInterval(intervalo);
+    intervalo=null;
+    pausadoManual=false;
+    avanzar();
+}
+
+function detener(mensaje){
+    detenido=true;
+    clearInterval(intervalo);
+    intervalo=null;
+    audio.pause();
+    player.className="terminado";
+    icono.textContent="⏹";
+    contador.className="hidden";
+    estadoPlayer.textContent=mensaje || "Toca para volver al menú.";
+    btnSiguiente.style.display="none";
+}
+
+function reiniciarSesion(){
+    detenido=false;
+    fallosConsecutivos=0;
+    clearInterval(intervalo);
+    intervalo=null;
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+    icono.textContent="⏸";
+    categoriaAudio.textContent="";
+    categoriaAudio.className="";
+    nombre.textContent="";
+    estadoPlayer.textContent="";
+    contador.className="hidden";
+    btnSiguiente.style.display="none";
+    configEl.style.display="flex";
 }
 
 audio.onended=()=>{
-    if(!pausadoManual){
+    if(!pausadoManual && !detenido){
         programarSiguiente(minutosEspera);
     }
 };
 
 audio.onerror=()=>{
-    programarSiguiente(0);
+    falloDeAudio();
 };
 
 //---------------------------------------------
 player.onclick=()=>{
+
+    if(detenido){
+        reiniciarSesion();
+        return;
+    }
 
     if(player.className==="esperando"){
         return; // mientras espera el próximo audio, no hace nada al tocar
@@ -389,14 +583,19 @@ player.onclick=()=>{
 
 };
 
+btnSiguiente.onclick=(e)=>{
+    e.stopPropagation();
+    saltarAlSiguiente();
+};
+
 //---------------------------------------------
 btnIniciar.onclick=async()=>{
 
-    const minutosValor=parseInt(minutosInput.value,10);
+    const minutosValor=parseFloat(minutosInput.value);
     const proporcionValor=parseInt(proporcionInput.value,10);
 
-    if(!minutosValor || minutosValor<1){
-        configMsg.textContent="Escribe un número válido de minutos.";
+    if(!minutosValor || minutosValor<=0){
+        configMsg.textContent="Escribe un número válido de minutos (0.5 o más).";
         return;
     }
 
@@ -407,6 +606,7 @@ btnIniciar.onclick=async()=>{
 
     minutosEspera=minutosValor;
     proporcion=proporcionValor;
+    guardarCfg();
     configMsg.textContent="Cargando lista de audios...";
     btnIniciar.disabled=true;
 
@@ -428,16 +628,22 @@ btnIniciar.onclick=async()=>{
     barajaExperto=[];
     pasoCiclo=0;
     pausadoManual=false;
+    detenido=false;
+    fallosConsecutivos=0;
+    clearInterval(intervalo);
+    intervalo=null;
 
     await mantenerPantalla();
 
     configEl.style.display="none";
     player.style.display="flex";
+    player.className="";
 
-    const item=siguienteAudio();
-    reproducir(item);
+    avanzar();
 
 };
+
+cargarCfg();
 
 </script>
 
