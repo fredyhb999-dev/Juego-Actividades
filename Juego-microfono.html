@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juego del Micrófono</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    width: 90%;
+    max-width: 420px;
+    background: #1e293b;
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  h1 { font-size: 1.1rem; margin-bottom: 16px; text-align: center; color: #94a3b8; }
+  .hidden { display: none !important; }
+
+  /* Calibración */
+  .calibrando { text-align: center; }
+  .calibrando p { margin-bottom: 12px; color: #cbd5e1; }
+  .barra-base {
+    width: 100%; height: 10px; background: #334155; border-radius: 6px; overflow: hidden; margin-bottom: 16px;
+  }
+  .nivel-base {
+    height: 100%; width: 0%; background: #38bdf8; transition: width 0.1s;
+  }
+  .btn-calibrar {
+    width: 100%; padding: 16px; border: none; border-radius: 12px;
+    background: #38bdf8; color: #000; font-weight: 700; font-size: 1rem; cursor: pointer;
+  }
+  .btn-calibrar:active { opacity: 0.9; }
+
+  /* Juego */
+  .accion {
+    font-size: 2rem; font-weight: 800; text-align: center;
+    margin: 24px 0; color: #fbbf24; min-height: 120px; display: flex; align-items: center; justify-content: center;
+  }
+  .medidor-container {
+    position: relative; height: 120px; margin: 20px 0; border: 1px solid #334155;
+    border-radius: 12px; background: #0f172a; overflow: hidden;
+  }
+  .medidor-barras {
+    display: flex; align-items: flex-end; height: 100%; width: 100%; gap: 4px; padding: 4px;
+  }
+  .barra {
+    flex: 1; background: #22d3ee; border-radius: 2px 2px 0 0; transition: height 0.05s;
+  }
+  .umbral-linea {
+    position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #ef4444;
+    transform: translateY(-50%); pointer-events: none; z-index: 2;
+  }
+  .umbral-label {
+    position: absolute; left: 6px; top: 2px; transform: translateY(-100%);
+    font-size: 0.75rem; color: #ef4444; background: #0f172a; padding: 0 4px; border-radius: 4px;
+  }
+
+  /* Temporizador */
+  .temporizador {
+    font-size: 3rem; font-weight: 800; text-align: center; color: #fbbf24;
+    margin: 16px 0; min-height: 60px;
+  }
+  .temporizador.urgente { color: #f87171; animation: parpadeo 1s infinite; }
+  @keyframes parpadeo { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* Botones juego */
+  .btn-accion {
+    width: 100%; padding: 18px; border: none; border-radius: 14px;
+    background: #3b82f6; color: #fff; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-bottom: 10px;
+  }
+  .btn-accion:active { opacity: 0.9; }
+  .btn-accion.secundaria { background: #475569; }
+
+  .nivel-live {
+    font-size: 0.85rem; color: #94a3b8; text-align: center; margin-top: 8px;
+  }
+  .nivel-live strong { color: #f8fafc; }
+
+  .umbral-control {
+    margin: 16px 0; padding: 14px; background: #334155; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .umbral-control label { font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-between; }
+  .umbral-control input[type=range] { width: 100%; accent-color: #38bdf8; }
+
+  /* Ventana emergente de resultado */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal-overlay.hidden { display: none !important; }
+  .modal {
+    background: #1e293b; border-radius: 22px; padding: 32px 24px; width: 100%; max-width: 340px;
+    text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .mensaje-resultado { font-size: 1.8rem; font-weight: 800; margin-bottom: 12px; color: #22d3ee; }
+  .mensaje-resultado.perdio { color: #f87171; }
+  .modal p { color: #cbd5e1; margin-bottom: 24px; line-height: 1.4; }
+
+  .permiso-msg {
+    display: none; margin-bottom: 14px; padding: 12px; border-radius: 12px; font-size: 0.85rem;
+    line-height: 1.4; text-align: left; background: #7f1d1d; color: #fecaca;
+  }
+  .permiso-msg.visible { display: block; }
+  .permiso-msg.info { background: #334155; color: #cbd5e1; }
+  .aviso {
+    font-size: 0.75rem; color: #94a3b8; margin-top: 16px; text-align: center; line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Pantalla de calibración -->
+  <section id="pantalla-calibracion" class="calibrando">
+    <h1>Calibrar micrófono</h1>
+    <p id="texto-calibracion">Mantén silencio normal en la habitación</p>
+    <div class="barra-base">
+      <div class="nivel-base" id="nivel-base"></div>
+    </div>
+    <div class="permiso-msg info visible" id="permiso-msg">Al iniciar, el navegador te pedirá permiso para usar el micrófono. Toca <strong>Permitir</strong>.</div>
+    <button class="btn-calibrar" id="btn-iniciar">Iniciar calibración</button>
+  </section>
+
+  <!-- Pantalla de juego -->
+  <section id="pantalla-juego" class="hidden">
+    <div class="accion" id="texto-accion">Presiona "Nuevo reto"</div>
+
+    <div class="temporizador" id="temporizador">01:00</div>
+
+    <div class="medidor-container">
+      <div class="medidor-barras" id="medidor-barras"></div>
+      <div class="umbral-linea" id="umbral-linea"></div>
+      <div class="umbral-label" id="umbral-label">Umbral</div>
+    </div>
+
+    <button class="btn-accion" id="btn-nuevo-reto">Nuevo reto</button>
+    <button class="btn-accion" id="btn-comenzar" style="background:#10b981;">Comenzar reto</button>
+
+    <div class="umbral-control">
+      <label>Límite de sonido <span id="valor-umbral">0</span></label>
+      <input type="range" id="slider-umbral" min="0" max="100" value="0">
+    </div>
+
+    <div class="nivel-live">Nivel: <strong id="nivel-actual">0%</strong> · Límite: <strong id="nivel-limite">0%</strong></div>
+  </section>
+
+  <!-- Ventana emergente de resultado -->
+  <div id="modal-resultado" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="mensaje-resultado" id="mensaje-resultado">¡Ya lo hizo!</div>
+      <p id="texto-resultado"></p>
+      <button class="btn-accion" id="btn-aceptar">Aceptar</button>
+    </div>
+  </div>
+
+  <div class="aviso">
+    El micrófono solo mide el volumen en tiempo real. No graba, no guarda ni envía audio a ningún servidor.
+  </div>
+</div>
+
+<script>
+const acciones = [
+  "No te rías",
+  "Baila como gallina",
+  "Dile un cumplido al oído",
+  "Haz una careta graciosa",
+  "Susurra algo dulce",
+  "Imita a un animal",
+  "No parpadees por 5 segundos",
+  "Habla como robot",
+  "Haz el sonido de una vaca",
+  "Dale un masaje en los hombros"
+];
+
+let audioCtx, analyser, micStream, dataArray;
+let calibrationDone = false;
+let noiseBase = 0;
+let rafId;
+let tiempoRestante = 60;
+let timerInterval = null;
+
+const temporizadorEl = document.getElementById('temporizador');
+const sliderUmbral = document.getElementById('slider-umbral');
+const valorUmbral = document.getElementById('valor-umbral');
+const nivelActualEl = document.getElementById('nivel-actual');
+const nivelLimiteEl = document.getElementById('nivel-limite');
+
+let limiteManual = 0; // 0-100 por el slider
+let framesSobreLimite = 0;
+const framesNecesarios = 15; // aproximadamente medio segundo
+let nivelSuave = null;
+
+const pantallaCalibracion = document.getElementById('pantalla-calibracion');
+const pantallaJuego = document.getElementById('pantalla-juego');
+
+const btnIniciar = document.getElementById('btn-iniciar');
+const textoCalibracion = document.getElementById('texto-calibracion');
+const nivelBase = document.getElementById('nivel-base');
+
+const textoAccion = document.getElementById('texto-accion');
+const medidorBarras = document.getElementById('medidor-barras');
+const umbralLinea = document.getElementById('umbral-linea');
+const umbralLabel = document.getElementById('umbral-label');
+
+const btnNuevoReto = document.getElementById('btn-nuevo-reto');
+
+const modalResultado = document.getElementById('modal-resultado');
+const mensajeResultado = document.getElementById('mensaje-resultado');
+const textoResultado = document.getElementById('texto-resultado');
+const btnAceptar = document.getElementById('btn-aceptar');
+const btnComenzar = document.getElementById('btn-comenzar');
+
+// Crear barras del medidor visual
+for (let i = 0; i < 30; i++) {
+  const b = document.createElement('div');
+  b.className = 'barra';
+  b.style.height = '10%';
+  medidorBarras.appendChild(b);
+}
+const barras = medidorBarras.querySelectorAll('.barra');
+
+function mostrarPermisoMsg(html, info) {
+  const el = document.getElementById('permiso-msg');
+  el.innerHTML = html;
+  el.className = 'permiso-msg visible' + (info ? ' info' : '');
+}
+
+function mensajeError(err) {
+  const pasos = '<br><br><strong>En Android (Chrome):</strong><br>1. Toca el candado junto a la dirección → Permisos → Micrófono → Permitir.<br>2. Si no aparece: Chrome ⋮ → Configuración → Configuración de sitios → Micrófono.<br>3. Ajustes de Android → Apps → Chrome → Permisos → Micrófono → Permitir.<br>Luego recarga la página.';
+  switch (err && err.name) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+      return 'Permiso de micrófono denegado.' + pasos;
+    case 'NotFoundError':
+      return 'No se encontró ningún micrófono en este dispositivo.';
+    case 'NotReadableError':
+      return 'El micrófono está siendo usado por otra app. Ciérrala e inténtalo de nuevo.';
+    case 'SecurityError':
+      return 'El navegador bloqueó el micrófono por seguridad. Abre la página desde un enlace HTTPS.';
+    default:
+      return 'No se pudo acceder al micrófono (' + (err && err.name ? err.name : 'error') + ').' + pasos;
+  }
+}
+
+async function iniciarAudio() {
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    const e = new Error('Contexto no seguro');
+    e.name = 'SecurityError';
+    throw e;
+  }
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false
+    }
+  });
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  const source = audioCtx.createMediaStreamSource(micStream);
+  source.connect(analyser);
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+function obtenerRMS() {
+  analyser.getByteTimeDomainData(dataArray);
+  let suma = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const dif = dataArray[i] - 128;
+    suma += dif * dif;
+  }
+  const rms = Math.sqrt(suma / dataArray.length);
+  return rms; // 0-128 aprox
+}
+
+function rmsADecibeles(rms) {
+  if (rms <= 0) return -100;
+  return 20 * Math.log10(rms / 128);
+}
+
+function rmsANivel(rms) {
+  const db = rmsADecibeles(rms);
+  const minDb = -60;
+  const pct = ((db - minDb) / (0 - minDb)) * 100;
+  return Math.max(0, Math.min(100, pct));
+}
+
+sliderUmbral.addEventListener('input', () => {
+  limiteManual = parseInt(sliderUmbral.value, 10);
+  valorUmbral.textContent = limiteManual;
+  nivelLimiteEl.textContent = limiteManual + '%';
+});
+
+function actualizarTimerVisual() {
+  const m = Math.floor(tiempoRestante / 60).toString().padStart(2, '0');
+  const s = (tiempoRestante % 60).toString().padStart(2, '0');
+  temporizadorEl.textContent = `${m}:${s}`;
+  temporizadorEl.classList.toggle('urgente', tiempoRestante <= 10);
+}
+
+function actualizarMedidor() {
+  if (!calibrationDone) return;
+
+  const rms = obtenerRMS();
+  const nivelCrudo = rmsANivel(rms);
+  nivelSuave = nivelSuave === null ? nivelCrudo : (nivelSuave * 0.75 + nivelCrudo * 0.25);
+  const nivel = nivelSuave;
+
+  nivelActualEl.textContent = Math.round(nivel) + '%';
+  nivelLimiteEl.textContent = limiteManual + '%';
+
+  barras.forEach(b => {
+    const h = Math.random() * nivel;
+    b.style.height = Math.min(h, 100) + '%';
+    b.style.background = h > limiteManual ? '#f87171' : '#22d3ee';
+  });
+
+  // Línea de umbral según límite manual del slider
+  umbralLinea.style.top = (100 - Math.min(limiteManual, 100)) + '%';
+
+  // Detección automática: si supera el límite por varios frames seguidos -> perdió
+  if (nivel > limiteManual) {
+    framesSobreLimite++;
+    if (framesSobreLimite >= framesNecesarios) {
+      mostrarResultado(false);
+      return;
+    }
+  } else {
+    framesSobreLimite = 0;
+  }
+
+  rafId = requestAnimationFrame(actualizarMedidor);
+}
+
+btnIniciar.addEventListener('click', async () => {
+  try {
+    await iniciarAudio();
+    btnIniciar.disabled = true;
+    btnIniciar.textContent = 'Calibrando... (mantene silencio)';
+    textoCalibracion.textContent = 'Calibrando ruido ambiente...';
+
+    const duracionCalibracion = 3000;
+    const inicioCalibracion = performance.now();
+    const muestras = [];
+
+    function calibrar() {
+      const rms = obtenerRMS();
+      muestras.push(rms);
+
+      const promedioActual = muestras.reduce((a, b) => a + b, 0) / muestras.length;
+      nivelBase.style.width = Math.min(Math.max((promedioActual / 60) * 100, 0), 100) + '%';
+
+      if (performance.now() - inicioCalibracion < duracionCalibracion) {
+        requestAnimationFrame(calibrar);
+      } else {
+        // Mediana: ignora picos aislados y da una base estable
+        const ordenadas = [...muestras].sort((a, b) => a - b);
+        noiseBase = ordenadas[Math.floor(ordenadas.length / 2)];
+        calibrationDone = true;
+
+        const ambientLevel = Math.round(rmsANivel(noiseBase));
+        limiteManual = Math.min(95, Math.max(10, ambientLevel + 20));
+        sliderUmbral.value = limiteManual;
+        valorUmbral.textContent = limiteManual;
+        nivelLimiteEl.textContent = limiteManual + '%';
+
+        pantallaCalibracion.classList.add('hidden');
+        pantallaJuego.classList.remove('hidden');
+        sortearAccion();
+        tiempoRestante = 60;
+        actualizarTimerVisual();
+        btnComenzar.style.display = 'block';
+        btnComenzar.disabled = false;
+      }
+    }
+
+    calibrar();
+  } catch (err) {
+    mostrarPermisoMsg(mensajeError(err), false);
+    btnIniciar.disabled = false;
+    btnIniciar.textContent = 'Reintentar';
+  }
+});
+
+function sortearAccion() {
+  const acc = acciones[Math.floor(Math.random() * acciones.length)];
+  textoAccion.textContent = acc;
+}
+
+btnNuevoReto.addEventListener('click', sortearAccion);
+
+btnComenzar.addEventListener('click', () => {
+  clearInterval(timerInterval);
+  cancelAnimationFrame(rafId);
+  tiempoRestante = 60;
+  actualizarTimerVisual();
+  btnComenzar.style.display = 'none';
+  framesSobreLimite = 0;
+  nivelSuave = null;
+  actualizarMedidor();
+
+  timerInterval = setInterval(() => {
+    tiempoRestante--;
+    actualizarTimerVisual();
+    if (tiempoRestante <= 0) {
+      clearInterval(timerInterval);
+      cancelAnimationFrame(rafId);
+      mostrarResultado(true);
+    }
+  }, 1000);
+});
+
+function mostrarResultado(gano) {
+  clearInterval(timerInterval);
+  cancelAnimationFrame(rafId);
+  modalResultado.classList.remove('hidden');
+
+  if (gano) {
+    mensajeResultado.textContent = '¡Ya lo hizo!';
+    mensajeResultado.className = 'mensaje-resultado';
+    textoResultado.textContent = 'Pasó el minuto sin superar el límite de sonido.';
+  } else {
+    mensajeResultado.textContent = 'No lo hizo';
+    mensajeResultado.className = 'mensaje-resultado perdio';
+    textoResultado.textContent = 'Superó el límite de sonido antes de que terminara el minuto.';
+  }
+}
+
+btnAceptar.addEventListener('click', () => {
+  modalResultado.classList.add('hidden');
+  tiempoRestante = 60;
+  actualizarTimerVisual();
+  sortearAccion();
+  btnComenzar.style.display = 'block';
+  btnComenzar.disabled = false;
+  framesSobreLimite = 0;
+  nivelSuave = null;
+  cancelAnimationFrame(rafId);
+  clearInterval(timerInterval);
+});
+
+// Informar si el permiso ya está bloqueado
+if (navigator.permissions && navigator.permissions.query) {
+  navigator.permissions.query({ name: 'microphone' }).then(r => {
+    const revisar = () => {
+      if (r.state === 'denied') mostrarPermisoMsg(mensajeError({ name: 'NotAllowedError' }), false);
+    };
+    revisar();
+    r.onchange = revisar;
+  }).catch(() => {});
+}
+</script>
+
+</body>
+</html>
