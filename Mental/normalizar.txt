@@ -1,0 +1,81 @@
+NORMALIZACION DE AUDIOS - Carpeta Mental
+=========================================
+
+Objetivo
+--------
+Que todos los mp3 suenen al mismo nivel percibido, sin que el conjunto
+quede mas bajo que ahora. Audios de voz, sin perder nitidez.
+
+Metodo (importante)
+-------------------
+Estos audios son clips cortos (4-6 segundos). El modo simple de loudnorm
+en una sola pasada NO funciona bien con clips cortos: no alcanza el nivel
+y deja diferencias grandes.
+
+Por eso el script hace, por cada archivo:
+
+1. Mide su loudness real (loudnorm print / LUFS).
+2. Calcula la ganancia necesaria para llegar a -16 LUFS.
+3. Aplica esa ganancia.
+4. Si hace falta subir, pasa por un limitador con sobremuestreo para
+   controlar los picos sin que el archivo recorte.
+
+Objetivo de loudness
+--------------------
+-16 LUFS (nivel comodo para movil/PWA), medido con ebur128.
+
+Picos
+-----
+Limitador: limit=0.841 (-1.5 dBFS) con sobremuestreo a 176.4 kHz y
+regreso a la frecuencia original del archivo.
+Solo se usa cuando el archivo necesita subir de nivel; si solo hay que
+bajar, se aplica ganancia pura sin limitador.
+
+Codec de salida
+---------------
+-c:a libmp3lame -q:a 2   MP3 VBR ~190 kbps (transparente para voz)
+-map_metadata 0          Conserva las etiquetas del original
+-map 0:a                 Procesa solo el audio
+
+Marca de archivo normalizado
+----------------------------
+comment = "NORMALIZADO v2 I=-16 TP=-1.5"
+
+Cada archivo normalizado queda marcado con esa etiqueta ID3.
+En corridas futuras, el script lee la etiqueta y salta los archivos que
+ya la tienen, por lo que NO se vuelven a re-codificar ni se deterioran.
+
+Como agregar audios o carpetas nuevas
+-------------------------------------
+1. Copiar los mp3 (o la carpeta nueva) dentro de Mental.
+2. Ejecutar normalizar.ps1.
+3. El script recorre Mental completo, de forma recursiva, y procesa
+   unicamente los archivos que no tengan la marca.
+
+Modo de trabajo del script
+--------------------------
+Normaliza EN SITIO: toma cada mp3, genera una version normalizada en un
+archivo temporal y, solo si ffmpeg termina correctamente, reemplaza el
+original. No crea una carpeta de salida aparte.
+
+Por eso, antes de la primera ejecucion se recomienda respaldar los
+originales (por ejemplo, copiar Mental a Mental-original).
+
+Que hace el script tecnicamente por archivo
+-------------------------------------------
+ffmpeg -i "entrada.mp3" -af "loudnorm=I=-16:TP=-1.5:print_format=json" -f null NUL
+(luego, con la ganancia calculada)
+ffmpeg -i "entrada.mp3" -map 0:a -af "volume=<ganancia>dB,aresample=176400,alimiter=limit=0.841:level=false,aresample=<sr>" -map_metadata 0 -metadata comment="NORMALIZADO v2 I=-16 TP=-1.5" -c:a libmp3lame -q:a 2 "temporal.mp3"
+
+Verificacion
+------------
+Medir con ebur128 (mas estable en clips cortos) y comprobar que el rango
+quede alrededor de 1 LU y la media cerca de -16.5 LUFS:
+
+ffmpeg -i "archivo.mp3" -af ebur128=peak=true -f null NUL
+
+Notas
+-----
+- No normalizar dos veces el mismo archivo: el script lo evita con la marca v2.
+- Si un archivo se reemplaza por otro sin la marca, se volvera a normalizar.
+- Este archivo es solo documentacion; el reproductor web no lo lee.
