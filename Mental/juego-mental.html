@@ -59,10 +59,18 @@
   #config p{
     font-size:.88rem; color:var(--fg-muted); max-width:320px; margin:0 0 26px;
   }
+  #config .campo{
+    width:100%; max-width:260px;
+    display:flex; flex-direction:column; align-items:center;
+    margin-bottom:18px;
+  }
+  #config .campo label{
+    font-size:.85rem; color:var(--fg-muted); margin-bottom:8px;
+  }
   #config input{
     width:100%; max-width:200px;
     font-size:1.4rem; text-align:center;
-    padding:12px; margin-bottom:22px;
+    padding:12px;
     border-radius:12px; border:1px solid var(--card-border);
     background: var(--card); color:var(--fg);
   }
@@ -122,8 +130,14 @@
 <div id="config">
   <div class="eyebrow">Mental</div>
   <h1>Antes de comenzar</h1>
-  <p>¿Cuántos segundos deben pasar entre cada frase?</p>
-  <input id="tiempoFrase" type="number" min="1" step="1" value="30" inputmode="numeric">
+  <div class="campo">
+    <label for="tiempoFrase">Segundos entre cada frase</label>
+    <input id="tiempoFrase" type="number" min="1" step="1" value="30" inputmode="numeric">
+  </div>
+  <div class="campo">
+    <label for="frasesCarpeta">Frases por carpeta</label>
+    <input id="frasesCarpeta" type="number" min="1" step="1" value="7" inputmode="numeric">
+  </div>
   <button id="btnConfigIniciar">Iniciar</button>
   <div id="configMsg"></div>
 </div>
@@ -151,13 +165,14 @@
   const BRANCH = "main";
   const BASE_FOLDER = "Mental";
   const FOLDERS = ["Fase 1a","Fase 1b","Fase 2a","Fase 2b","Fase 3a","Fase 3b","Fase 4a","Fase 4b","Especial"];
-  const FRASES_POR_CARPETA = 7;
+  let FRASES_POR_CARPETA = 7;
   let ESPERA_FRASE_MS = 0.5 * 60 * 1000; // valor por defecto; se sobrescribe con lo que el usuario indique al inicio
   const ESPERA_CARPETA_MS = 1 * 60 * 1000; // 1 minuto al cambiar de carpeta
   // ============================
 
   const configEl        = document.getElementById("config");
   const tiempoFraseInput = document.getElementById("tiempoFrase");
+  const frasesCarpetaInput = document.getElementById("frasesCarpeta");
   const btnConfigIniciar = document.getElementById("btnConfigIniciar");
   const configMsgEl      = document.getElementById("configMsg");
 
@@ -462,8 +477,14 @@
       configMsgEl.textContent = "Escribe un número de segundos válido.";
       return;
     }
+    const frases = parseInt(frasesCarpetaInput.value, 10);
+    if(!frases || frases <= 0){
+      configMsgEl.textContent = "Escribe una cantidad de frases válida.";
+      return;
+    }
     configMsgEl.textContent = "";
     ESPERA_FRASE_MS = segundos * 1000;
+    FRASES_POR_CARPETA = frases;
     configEl.style.display = "none";
     screenEl.style.display = "flex";
     startGame();
