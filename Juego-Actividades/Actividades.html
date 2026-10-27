@@ -157,6 +157,7 @@ button:disabled{ opacity:.5; cursor:default; }
 <div id="round"></div>
 <h1 id="title"></h1>
 <div id="timer"></div>
+<button id="skip" style="display:none">⏭ Siguiente actividad</button>
 </div>
 </div>
 <script>
@@ -169,6 +170,9 @@ const ARCHIVO_ACTIVIDADES = "Actividades.json";
 // ====================================================
 
 let wakeLock = null;
+let audioCtx = null;
+let vozTimeout = null;
+let lastSkip = 0;
 
 async function mantenerPantallaEncendida(){
 
@@ -185,6 +189,7 @@ async function mantenerPantallaEncendida(){
 let actividades=[];
 
 const startBtn=document.getElementById("start");
+const skipBtn=document.getElementById("skip");
 const cargaMsg=document.getElementById("cargaMsg");
 
 async function cargarActividades(){
@@ -213,12 +218,15 @@ let lista=[];
 
 function mezclar(a){return [...a].sort(()=>Math.random()-0.5);}
 function beep(n){
- const c=new(window.AudioContext||window.webkitAudioContext)();
- let t=c.currentTime;
+ if(!audioCtx){
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+ }
+ if(audioCtx.state==="suspended"){ audioCtx.resume(); }
+ let t=audioCtx.currentTime;
  for(let i=0;i<n;i++){
-  const o=c.createOscillator(),g=c.createGain();
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
   o.type="sine";o.frequency.value=880;
-  o.connect(g);g.connect(c.destination);
+  o.connect(g);g.connect(audioCtx.destination);
   g.gain.setValueAtTime(.0001,t);
   g.gain.exponentialRampToValueAtTime(.3,t+.01);
   g.gain.exponentialRampToValueAtTime(.0001,t+.25);
@@ -226,51 +234,114 @@ function beep(n){
  }
 }
 
+function vozDisponible(){
+ return ("speechSynthesis" in window) && ("SpeechSynthesisUtterance" in window);
+}
+
+function hablar(texto){
+ if(!vozDisponible()) return;
+ try{
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(texto);
+  u.lang="es-ES";
+  u.rate=1;
+  u.pitch=1;
+  u.volume=1;
+  const voces=speechSynthesis.getVoices();
+  const vEspanol=voces.find(v=>v.lang && v.lang.toLowerCase().indexOf("es")===0);
+  if(vEspanol) u.voice=vEspanol;
+  speechSynthesis.speak(u);
+ }catch(e){}
+}
+
+function anunciar(texto){
+ if(vozTimeout){ clearTimeout(vozTimeout); vozTimeout=null; }
+ if(vozDisponible()){
+  try{ speechSynthesis.cancel(); }catch(e){}
+ }
+ vozTimeout=setTimeout(()=>{
+  vozTimeout=null;
+  hablar(texto);
+ },400);
+}
+
 
 function fmt(s){let m=Math.floor(s/60);let ss=s%60;return String(m).padStart(2,"0")+":"+String(ss).padStart(2,"0")}
 
+
+function terminarJuego(){
+ clearInterval(intv);
+ if(vozTimeout){ clearTimeout(vozTimeout); vozTimeout=null; }
+ if(vozDisponible()){ try{ speechSynthesis.cancel(); }catch(e){} }
+ skipBtn.style.display="none";
+ document.getElementById("title").textContent="¡Juego terminado!";
+ document.getElementById("timer").textContent="";
+}
 
 function siguienteActividad(){
  if(lista.length===0)lista=mezclar(actividades);
  actual++;
  document.getElementById("round").textContent="Ronda "+actual+" de "+total;
- document.getElementById("title").textContent=lista.pop();
+ const act=lista.pop();
+ document.getElementById("title").textContent=act;
  rest=(Math.floor(Math.random()*4)+1)*60;
  estado="actividad";
+ skipBtn.style.display="block";
  beep(1);
+ anunciar(act);
  document.getElementById("timer").textContent=fmt(rest);
 }
 
 function tick(){
  rest--;
  document.getElementById("timer").textContent=fmt(Math.max(rest,0));
+ if(rest===10 && estado==="actividad"){
+   hablar("Quedan 10 segundos.");
+ }
  if(rest>0)return;
  if(estado==="actividad"){
    beep(2);
    if(actual>=total){
-      clearInterval(intv);
-      document.getElementById("title").textContent="¡Juego terminado!";
-      document.getElementById("timer").textContent="";
+      terminarJuego();
       return;
    }
    estado="descanso";
+   skipBtn.style.display="none";
    document.getElementById("title").textContent="Descanso";
    rest=30;
+   document.getElementById("timer").textContent=fmt(rest);
  }else{
    siguienteActividad();
  }
 }
 
-startBtn.onclick=async()=>{
- await mantenerPantallaEncendida();
+function saltarActividad(){
+ if(estado!=="actividad") return;
+ const ahora=Date.now();
+ if(ahora-lastSkip<800) return;
+ lastSkip=ahora;
+ if(actual>=total){
+   beep(2);
+   terminarJuego();
+   return;
+ }
+ siguienteActividad();
+}
+
+startBtn.onclick=()=>{
+ mantenerPantallaEncendida();
+ if(vozDisponible()){ try{ speechSynthesis.cancel(); }catch(e){} }
  total=parseInt(document.getElementById("rounds").value)||1;
  document.getElementById("setup").style.display="none";
  document.getElementById("game").style.display="block";
  lista=mezclar(actividades);
  actual=0;
+ lastSkip=0;
  siguienteActividad();
  intv=setInterval(tick,1000);
 };
+
+skipBtn.onclick=saltarActividad;
 
 cargarActividades();
 
