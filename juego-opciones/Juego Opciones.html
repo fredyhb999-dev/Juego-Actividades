@@ -285,20 +285,39 @@ function nextRound(){
 
 function pick(choice){
 
-  let eliminated;
+  let eliminated, elegida;
 
   if(choice === "a"){
     list.push(currentB);
     eliminated = currentA;
+    elegida = currentA;
   } else {
     list.push(currentA);
     eliminated = currentB;
+    elegida = currentB;
   }
 
   addHistory(eliminated);
+  hablar(elegida);
   round++;
 
   nextRound();
+}
+
+function hablar(texto){
+  if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = "es-ES";
+    u.rate = 1;
+    u.pitch = 1;
+    u.volume = 1;
+    const voces = speechSynthesis.getVoices();
+    const vEspanol = voces.find(v => v.lang && v.lang.toLowerCase().indexOf("es") === 0);
+    if(vEspanol) u.voice = vEspanol;
+    speechSynthesis.speak(u);
+  }catch(e){}
 }
 
 function addHistory(item){
