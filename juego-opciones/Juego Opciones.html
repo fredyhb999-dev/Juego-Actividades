@@ -167,6 +167,18 @@ button:disabled{
 }
 #cargaMsg.error{ color: var(--coral); }
 
+/* FILA BOTONES INFERIORES */
+.fila-botones{
+  display:flex;
+  gap:10px;
+  margin-top:16px;
+  flex-wrap:wrap;
+}
+.fila-botones button{
+  flex:1;
+  min-width:0;
+}
+
 /* RESPONSIVE */
 @media (max-width: 600px) {
   button {
@@ -247,7 +259,6 @@ button:disabled{
 
 <button id="btnIniciar" onclick="start()" disabled>Cargando opciones...</button>
 <div id="cargaMsg"></div>
-<button id="btnRutinas" disabled style="margin-top:8px; width:100%; padding:12px; border:none; border-radius:12px; font-family:'Chakra Petch', sans-serif; font-weight:700; font-size:1rem; color: var(--bg); background: linear-gradient(90deg, var(--coral), var(--teal)); cursor:pointer;">🎧 Ver Rutinas de Alexa</button>
 
 <div id="game">
 
@@ -279,7 +290,10 @@ button:disabled{
     <button onclick="pick('b')">Escoge B</button>
   </div>
 
-  <button onclick="start()">🔄 Reiniciar</button>
+  <div class="fila-botones">
+    <button onclick="start()">🔄 Reiniciar</button>
+    <button id="btnRutinas" disabled onclick="abrirModalRutinas()">Rutinas Alexa</button>
+  </div>
 
   <div id="history">
     <strong>🧾 Historial de eliminados</strong>
@@ -363,6 +377,8 @@ async function start(){
   document.getElementById("historyList").innerHTML = "";
   round = 1;
 
+  btnRutinasEl.disabled = false;
+
   await requestWakeLock();
   nextRound();
 }
@@ -370,6 +386,7 @@ async function start(){
 function nextRound(){
 
   if(list.length === 1){
+    btnRutinasEl.disabled = true;
     releaseWakeLock();
     document.getElementById("game").style.display = "none";
     document.getElementById("winner").innerText =
