@@ -255,8 +255,31 @@ let list = [];
 let currentA = null;
 let currentB = null;
 let round = 1;
+let wakeLock = null;
 
-function start(){
+// ---------- Wake Lock ----------
+async function requestWakeLock(){
+  try{
+    if("wakeLock" in navigator){
+      wakeLock = await navigator.wakeLock.request("screen");
+    }
+  }catch(e){
+    console.warn("No se pudo activar Wake Lock:", e);
+  }
+}
+function releaseWakeLock(){
+  if(wakeLock){
+    wakeLock.release().catch(()=>{});
+    wakeLock = null;
+  }
+}
+document.addEventListener("visibilitychange", async ()=>{
+  if(document.visibilityState === "visible"){
+    await requestWakeLock();
+  }
+});
+
+async function start(){
 
   list = [...ORIGINAL_LIST]; // reinicia lista
   document.getElementById("game").style.display = "block";
@@ -264,12 +287,14 @@ function start(){
   document.getElementById("historyList").innerHTML = "";
   round = 1;
 
+  await requestWakeLock();
   nextRound();
 }
 
 function nextRound(){
 
   if(list.length === 1){
+    releaseWakeLock();
     document.getElementById("game").style.display = "none";
     document.getElementById("winner").innerText =
       "🏆 Ganador: " + list[0];
