@@ -165,6 +165,38 @@
   @media (max-width: 680px){
     #panel{ grid-template-columns: 1fr; }
   }
+
+  /* ---------- MODAL BIENVENIDA ---------- */
+  #modalBienvenida{
+    position:fixed; inset:0; z-index:10000;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .modal-overlay-b{
+    position:absolute; inset:0;
+    background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+  }
+  .modal-content-b{
+    position:relative; background:var(--card);
+    border:1px solid var(--card-border); border-radius:16px;
+    width:100%; max-width:420px;
+    padding:24px 20px;
+    text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6); z-index:10001;
+  }
+  .modal-content-b h2{
+    margin:0 0 12px; font-family:'Chakra Petch', sans-serif; font-size:1.3rem;
+  }
+  .modal-content-b p{
+    margin:0 0 22px; font-size:.95rem; color:var(--fg-muted); line-height:1.5;
+  }
+  .btn-aceptar-bienvenida{
+    width:100%; padding:16px; border:none; border-radius:14px;
+    font-family:'Chakra Petch', sans-serif; font-weight:700; font-size:1.1rem;
+    color: var(--bg); background: linear-gradient(90deg, var(--coral), var(--teal));
+    cursor:pointer; transition: transform .15s ease, opacity .2s ease;
+  }
+  .btn-aceptar-bienvenida:active{ transform: scale(.96); }
 </style>
 </head>
 
@@ -185,6 +217,16 @@
   <div class="panel">
     <h2>Detalle</h2>
     <div id="detalle"></div>
+  </div>
+</div>
+
+<!-- Modal Bienvenida -->
+<div id="modalBienvenida">
+  <div class="modal-overlay-b" onclick="cerrarBienvenida()"></div>
+  <div class="modal-content-b" onclick="event.stopPropagation()">
+    <h2>Bienvenido a Rutinas de Alexa</h2>
+    <p>Toca Aceptar para activar y mantener la pantalla encendida mientras usas las rutinas.</p>
+    <button class="btn-aceptar-bienvenida" onclick="activarBienvenida()">Aceptar</button>
   </div>
 </div>
 
@@ -337,6 +379,14 @@ async function enviar(a, btn, estado){
     btn.textContent = previo;
     btn.disabled = false;
   }
+}
+
+function activarBienvenida(){
+  requestWakeLock();
+  document.getElementById("modalBienvenida").style.display = "none";
+}
+function cerrarBienvenida(){
+  document.getElementById("modalBienvenida").style.display = "none";
 }
 
 cargar();

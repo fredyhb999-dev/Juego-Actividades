@@ -178,6 +178,63 @@ button:disabled{
     font-size: 1.15rem;
   }
 }
+
+/* ---------- MODAL RUTINAS ---------- */
+#modalRutinas{
+  position:fixed; inset:0; z-index:10000;
+  display:none; align-items:center; justify-content:center;
+  padding:20px;
+}
+.modal-overlay{
+  position:absolute; inset:0;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
+}
+.modal-content{
+  position:relative; background:var(--card);
+  border:1px solid var(--card-border); border-radius:16px;
+  width:100%; max-width:420px; max-height:90vh;
+  display:flex; flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,.6); z-index:10001;
+}
+.modal-header{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:16px 18px; border-bottom:1px solid var(--card-border);
+}
+.modal-header h3{
+  margin:0; font-family:'Chakra Petch', sans-serif; font-size:1.1rem;
+}
+.modal-cerrar{
+  background:transparent; border:none; color:var(--fg-muted);
+  font-size:1.6rem; cursor:pointer; padding:0 4px; line-height:1;
+}
+.modal-cerrar:hover{ color:var(--fg); }
+.modal-body{
+  padding:16px 18px; overflow-y:auto; flex:1;
+}
+.modal-footer{
+  padding:12px 18px; border-top:1px solid var(--card-border);
+  text-align:right;
+}
+.btn-cerrar-modal{
+  background:transparent; border:1px solid var(--card-border);
+  color:var(--fg); padding:8px 16px; border-radius:8px;
+  cursor:pointer; font-family:inherit;
+}
+.btn-cerrar-modal:hover{ background:rgba(255,255,255,.05); }
+.rutina-item{
+  width:100%; text-align:left; padding:12px 14px;
+  background:var(--bg-2); border:1px solid var(--card-border);
+  border-radius:12px; margin-bottom:8px;
+  font-family:'Inter', sans-serif; font-size:.95rem; color:var(--fg);
+  cursor:pointer; transition:border-color .15s ease, transform .1s ease;
+}
+.rutina-item:active{ transform:scale(.98); }
+.rutina-item:hover{ border-color:var(--teal); }
+.rutina-estado{
+  font-size:.8rem; margin-top:4px; min-height:1.2em;
+}
+.rutina-estado.ok{ color:var(--verde); }
+.rutina-estado.err{ color:var(--coral); }
 </style>
 </head>
 
@@ -190,8 +247,27 @@ button:disabled{
 
 <button id="btnIniciar" onclick="start()" disabled>Cargando opciones...</button>
 <div id="cargaMsg"></div>
+<button id="btnRutinas" disabled style="margin-top:8px; width:100%; padding:12px; border:none; border-radius:12px; font-family:'Chakra Petch', sans-serif; font-weight:700; font-size:1rem; color: var(--bg); background: linear-gradient(90deg, var(--coral), var(--teal)); cursor:pointer;">🎧 Ver Rutinas de Alexa</button>
 
 <div id="game">
+
+<!-- Modal Rutinas -->
+<div id="modalRutinas" class="modal" style="display:none;">
+  <div class="modal-overlay" onclick="cerrarModalRutinas()"></div>
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Rutinas de Alexa</h3>
+      <button class="modal-cerrar" onclick="cerrarModalRutinas()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modalRutinasMsg" style="font-size:.85rem; color:var(--fg-muted); min-height:20px;"></div>
+      <div id="listaRutinas" style="max-height:300px; overflow-y:auto; margin-top:10px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cerrar-modal" onclick="cerrarModalRutinas()">Cerrar</button>
+    </div>
+  </div>
+</div>
 
   <div class="cards">
     <div class="card" id="a">A</div>
@@ -352,8 +428,70 @@ function addHistory(item){
   document.getElementById("historyList").prepend(div);
 }
 
+// ---------- Modal Rutinas ----------
+let rutinasLista = [];
+const modalRutinasEl = document.getElementById("modalRutinas");
+const listaRutinasEl = document.getElementById("listaRutinas");
+const btnRutinasEl = document.getElementById("btnRutinas");
+const modalMsgEl = document.getElementById("modalRutinasMsg");
+
+async function cargarRutinasModal(){
+  modalMsgEl.textContent = "Cargando rutinas...";
+  try{
+    const res = await fetch("../acciones.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    rutinasLista = await res.json();
+    if(Array.isArray(rutinasLista) && rutinasLista.length > 0){
+      btnRutinasEl.disabled = false;
+      modalMsgEl.textContent = "";
+    } else {
+      modalMsgEl.textContent = "No hay rutinas disponibles.";
+    }
+  }catch(e){
+    modalMsgEl.textContent = "No se pudieron cargar las rutinas.";
+    btnRutinasEl.disabled = true;
+  }
+}
+
+function renderRutinas(){
+  listaRutinasEl.innerHTML = "";
+  rutinasLista.forEach((a, i)=>{
+    const div = document.createElement("div");
+    div.className = "rutina-item";
+    div.textContent = a.accion || `Rutina ${i+1}`;
+    div.onclick = async ()=>{
+      div.style.opacity = ".6";
+      const estado = document.createElement("div");
+      estado.className = "rutina-estado";
+      estado.textContent = "Enviando...";
+      div.appendChild(estado);
+      try{
+        await fetch(a.link, { mode:"no-cors", cache:"no-store" });
+        estado.className = "rutina-estado ok";
+        estado.textContent = "Enviado ✓";
+      }catch(err){
+        estado.className = "rutina-estado err";
+        estado.textContent = "Error al enviar";
+      }
+      setTimeout(cerrarModalRutinas, 900);
+    };
+    listaRutinasEl.appendChild(div);
+  });
+}
+
+function abrirModalRutinas(){
+  renderRutinas();
+  modalRutinasEl.style.display = "flex";
+}
+function cerrarModalRutinas(){
+  modalRutinasEl.style.display = "none";
+}
+
+btnRutinasEl.onclick = abrirModalRutinas;
+
 btnIniciar.onclick = start;
 cargarOpciones();
+cargarRutinasModal();
 
 </script>
 
