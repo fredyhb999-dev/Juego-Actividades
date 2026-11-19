@@ -18,10 +18,10 @@ El `index.html` de la raíz enlaza a **Juegos**, **JuegosGuiados**, **Audios**,
   nombre se repita, **no son copias**: su contenido es diferente. No asumir que
   una es la versión vieja de la otra.
 - Los scripts compartidos están en `js/` (`volver.js`, `funciones.js`).
-- Las carpetas de audio e imágenes (`Actividades en Audio por Tiempo`,
-  `Audio Tiempo Esp`, `Castigos al Azar`, `Frases Accion`, `Impacto`,
-  `Mental`) son contenido. No se renombran, mueven ni editan salvo que se
-  pida.
+- Las carpetas de audio e imágenes (`Castigos Varios en Audio`,
+  `Castigos al Azar`, `Castigos Audio Secuencial`, `Frases Accion`,
+  `Impacto`, `Mental`) son contenido. No se renombran, mueven ni editan
+  salvo que se pida.
 - El contenido de esas carpetas (textos, nombres, ponderaciones, audios e
   imágenes) tampoco es nuestro: no se corrige ni se "arregla", aunque tenga
   erratas o datos repetidos. Se avisa al usuario y él decide.
