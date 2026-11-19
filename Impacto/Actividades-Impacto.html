@@ -60,9 +60,6 @@
     font-size:.92rem; color:var(--fg-muted); max-width:320px; margin:0;
     line-height:1.5;
   }
-  #inicioMsg{
-    margin-top:20px; font-size:.85rem; color: var(--coral); min-height:20px;
-  }
 
   /* ---------- pantalla de resultados ---------- */
   #resultado{
@@ -135,6 +132,110 @@
     border-radius:12px;
     cursor:pointer;
   }
+
+  /* ---------- pantalla de imposiciones ---------- */
+  #imposiciones{
+    display:none;
+    min-height:100dvh; width:100%;
+    flex-direction:column; align-items:center; justify-content:center;
+    padding: max(28px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
+  }
+  #imposiciones h1{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; font-size:1.6rem; margin:0 0 8px;
+    width:fit-content;
+    margin-left:auto; margin-right:auto;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  #imposiciones .ayuda{
+    font-size:.88rem; color:var(--fg-muted); margin:0 0 22px;
+    max-width:330px; text-align:center; line-height:1.5;
+  }
+  #campos{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; gap:10px;
+    margin-bottom:22px;
+  }
+  .campo{ display:flex; align-items:center; gap:10px; }
+  .campo-num{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.8rem; color:var(--fg-muted);
+    width:16px; text-align:right; flex:none;
+  }
+  .campo input{
+    flex:1; min-width:0;
+    font-family:'Inter', system-ui, sans-serif;
+    font-size:1rem; color:var(--fg);
+    background: var(--card);
+    border:1px solid var(--card-border);
+    border-radius:12px;
+    padding:13px 14px;
+    outline:none;
+  }
+  .campo input:focus{ border-color: var(--teal); }
+  .campo input::placeholder{ color:#6f6591; }
+
+  .btn-principal{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; letter-spacing:.06em; font-size:1.05rem;
+    width:100%; max-width:440px;
+    padding:16px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none; border-radius:14px;
+    cursor:pointer;
+    transition: transform .15s ease;
+  }
+  .btn-principal:active{ transform: scale(.97); }
+
+  #modos{
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .oculto{ display:none !important; }
+
+  #impMsg{
+    margin-top:16px; font-size:.85rem; color: var(--coral); min-height:20px;
+    text-align:center;
+  }
+
+  /* ---------- ventana emergente ---------- */
+  #modal{
+    position:fixed; inset:0; z-index:50;
+    display:none; align-items:center; justify-content:center;
+    padding:24px;
+    background: rgba(10, 7, 16, .8);
+  }
+  #modal.visible{ display:flex; }
+  .modal-card{
+    width:100%; max-width:380px;
+    background: var(--card);
+    border:1px solid var(--card-border);
+    border-radius:20px;
+    padding:24px 22px;
+    text-align:center;
+  }
+  .modal-label{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.72rem; letter-spacing:.28em; text-transform:uppercase;
+    color: var(--fg-muted); margin-bottom:14px;
+  }
+  .modal-texto{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:600; font-size:1.4rem; line-height:1.35;
+    margin:0 0 22px;
+  }
+  #btnAceptar{
+    font-family:'Chakra Petch', sans-serif;
+    font-weight:700; letter-spacing:.06em; font-size:1rem;
+    width:100%; padding:14px;
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border:none; border-radius:12px;
+    cursor:pointer;
+  }
+  #btnAceptar:active{ transform: scale(.97); }
 </style>
 </head>
 <body>
@@ -143,7 +244,25 @@
   <p class="eyebrow">Actividades por Impacto</p>
   <h1>Toca para comenzar</h1>
   <p>Se elegirá una actividad aleatoria de cada nivel de impacto (1 al 5), según su ponderación.</p>
-  <div id="inicioMsg"></div>
+</div>
+
+<div id="imposiciones">
+  <p class="eyebrow">Actividades por Impacto</p>
+  <h1>Imposiciones</h1>
+  <p class="ayuda">Opcional: escribe hasta 5 imposiciones. Si dejas todo vacío, la rutina sale como siempre.</p>
+  <div id="campos">
+    <div class="campo"><span class="campo-num">1</span><input type="text" id="imp1" placeholder="Imposición 1" autocomplete="off"></div>
+    <div class="campo"><span class="campo-num">2</span><input type="text" id="imp2" placeholder="Imposición 2" autocomplete="off"></div>
+    <div class="campo"><span class="campo-num">3</span><input type="text" id="imp3" placeholder="Imposición 3" autocomplete="off"></div>
+    <div class="campo"><span class="campo-num">4</span><input type="text" id="imp4" placeholder="Imposición 4" autocomplete="off"></div>
+    <div class="campo"><span class="campo-num">5</span><input type="text" id="imp5" placeholder="Imposición 5" autocomplete="off"></div>
+  </div>
+  <button id="btnComenzar" class="btn-principal">Comenzar</button>
+  <div id="modos" class="oculto">
+    <button id="btnPorActividad" class="btn-principal">Por actividad</button>
+    <button id="btnPorRonda" class="btn-principal">Por ronda</button>
+  </div>
+  <div id="impMsg"></div>
 </div>
 
 <div id="resultado">
@@ -151,6 +270,14 @@
   <div id="lista"></div>
   <button id="btnSiguiente">Siguiente</button>
   <button id="btnVolver">Volver al inicio</button>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTexto">
+  <div class="modal-card">
+    <div class="modal-label">Imposición</div>
+    <p class="modal-texto" id="modalTexto"></p>
+    <button id="btnAceptar">Aceptar</button>
+  </div>
 </div>
 
 <script>
@@ -165,18 +292,71 @@
     { nivel: 4, archivo: "Impacto 4.json" },
     { nivel: 5, archivo: "Impacto 5.json" }
   ];
+  const CLAVE_IMPOSICIONES = "impacto.imposiciones";
   // ============================
 
   const inicioEl    = document.getElementById("inicio");
-  const inicioMsgEl = document.getElementById("inicioMsg");
+  const imposicionesEl = document.getElementById("imposiciones");
+  const camposEl    = document.getElementById("campos");
+  const btnComenzar = document.getElementById("btnComenzar");
+  const modosEl     = document.getElementById("modos");
+  const btnPorActividad = document.getElementById("btnPorActividad");
+  const btnPorRonda = document.getElementById("btnPorRonda");
+  const impMsgEl    = document.getElementById("impMsg");
   const resultadoEl = document.getElementById("resultado");
   const listaEl      = document.getElementById("lista");
   const btnSiguiente = document.getElementById("btnSiguiente");
   const btnVolver    = document.getElementById("btnVolver");
+  const modalEl      = document.getElementById("modal");
+  const modalTextoEl = document.getElementById("modalTexto");
+  const btnAceptar   = document.getElementById("btnAceptar");
 
   let listasPorNivel = null; // { 1: [{nombre,peso}], 2: [...], ... }
   let ultimaPorNivel = {};   // { 1: "nombre elegido antes", ... }
+  let imposiciones = [];     // textos escritos por el usuario
+  let modo = null;           // "actividad" | "ronda"
+  let turno = 0;             // nivel actual en modo "por actividad"
+  let alAceptar = null;      // qué hacer cuando se toca "Aceptar"
   let wakeLock = null;
+
+  // ---------- Imposiciones: leer, recordar y alternar botones ----------
+  const inputs = Array.from(camposEl.querySelectorAll("input"));
+
+  function leerImposiciones(){
+    return inputs
+      .map(input => input.value.trim())
+      .filter(texto => texto.length > 0)
+      .slice(0, 5);
+  }
+
+  function guardarImposiciones(lista){
+    try{
+      localStorage.setItem(CLAVE_IMPOSICIONES, JSON.stringify(lista));
+    }catch(e){
+      // Si el navegador no deja guardar, seguimos sin memoria.
+    }
+  }
+
+  function recordarImposiciones(){
+    try{
+      const guardado = localStorage.getItem(CLAVE_IMPOSICIONES);
+      if(!guardado) return;
+      const lista = JSON.parse(guardado);
+      if(!Array.isArray(lista)) return;
+      lista.slice(0, 5).forEach((texto, i)=>{
+        if(typeof texto === "string") inputs[i].value = texto;
+      });
+    }catch(e){
+      // Memoria ilegible: se empieza con los campos vacíos.
+    }
+  }
+
+  function actualizarBotones(){
+    const hay = leerImposiciones().length > 0;
+    btnComenzar.classList.toggle("oculto", hay);
+    modosEl.classList.toggle("oculto", !hay);
+  }
+  inputs.forEach(input => input.addEventListener("input", actualizarBotones));
 
   // ---------- Wake Lock ----------
   async function requestWakeLock(){
@@ -237,48 +417,138 @@
     return pool[pool.length - 1]; // resguardo por redondeo
   }
 
-  function generarRutina(){
-    listaEl.innerHTML = "";
-    ARCHIVOS.forEach(({ nivel })=>{
-      const lista = listasPorNivel[nivel];
-      const elegido = elegirPonderado(lista, ultimaPorNivel[nivel]);
-      ultimaPorNivel[nivel] = elegido.nombre;
+  // ---------- Tarjetas ----------
+  function crearTarjeta(nivel){
+    const lista = listasPorNivel[nivel];
+    const elegido = elegirPonderado(lista, ultimaPorNivel[nivel]);
+    ultimaPorNivel[nivel] = elegido.nombre;
 
-      const card = document.createElement("div");
-      card.className = "nivel-card";
-      card.innerHTML = `
-        <div class="nivel-label">Impacto ${nivel}</div>
-        <div class="nivel-actividad">${elegido.nombre}</div>
-      `;
-      listaEl.appendChild(card);
-    });
+    const card = document.createElement("div");
+    card.className = "nivel-card";
+    card.innerHTML = `
+      <div class="nivel-label">Impacto ${nivel}</div>
+      <div class="nivel-actividad">${elegido.nombre}</div>
+    `;
+    return card;
   }
 
-  // ---------- Flujo ----------
-  inicioEl.addEventListener("click", async ()=>{
-    inicioMsgEl.textContent = "Cargando actividades...";
-    try{
-      listasPorNivel = await cargarListas();
-    }catch(e){
-      inicioMsgEl.textContent = e.message;
-      return;
-    }
-    await requestWakeLock();
-    ultimaPorNivel = {};
-    generarRutina();
-    inicioEl.style.display = "none";
-    resultadoEl.style.display = "flex";
+  function generarRutinaCompleta(){
+    listaEl.innerHTML = "";
+    ARCHIVOS.forEach(({ nivel })=>{
+      listaEl.appendChild(crearTarjeta(nivel));
+    });
+    btnSiguiente.textContent = "Siguiente";
+    mostrarResultado();
+  }
+
+  // ---------- Ventana emergente de imposición ----------
+  function pedirImposicion(siguiente){
+    const elegida = imposiciones[Math.floor(Math.random() * imposiciones.length)];
+    modalTextoEl.textContent = elegida;
+    alAceptar = siguiente;
+    modalEl.classList.add("visible");
+  }
+
+  btnAceptar.addEventListener("click", ()=>{
+    modalEl.classList.remove("visible");
+    const siguiente = alAceptar;
+    alAceptar = null;
+    if(siguiente) siguiente();
   });
 
+  // ---------- Flujo por actividad: una tarjeta por nivel ----------
+  function agregarActividad(){
+    turno++;
+    listaEl.appendChild(crearTarjeta(turno));
+    btnSiguiente.textContent = turno < ARCHIVOS.length ? "Continuar" : "Siguiente";
+  }
+
+  function empezarRondaActividad(){
+    turno = 0;
+    listaEl.innerHTML = "";
+    btnSiguiente.textContent = "Continuar";
+    mostrarResultado();
+    pedirImposicion(agregarActividad);
+  }
+
+  // ---------- Flujo por ronda: las 5 tarjetas de golpe ----------
+  function empezarRondaCompleta(){
+    listaEl.innerHTML = "";
+    mostrarResultado();
+    pedirImposicion(generarRutinaCompleta);
+  }
+
+  // ---------- Pantallas ----------
+  function mostrarResultado(){
+    inicioEl.style.display = "none";
+    imposicionesEl.style.display = "none";
+    resultadoEl.style.display = "flex";
+    requestWakeLock();
+  }
+
+  function mostrarInicio(){
+    resultadoEl.style.display = "none";
+    imposicionesEl.style.display = "none";
+    inicioEl.style.display = "flex";
+    impMsgEl.textContent = "";
+    actualizarBotones();
+  }
+
+  // ---------- Arranque ----------
+  async function arrancar(modoElegido){
+    impMsgEl.textContent = "Cargando actividades...";
+    try{
+      if(!listasPorNivel) listasPorNivel = await cargarListas();
+    }catch(e){
+      impMsgEl.textContent = e.message;
+      return;
+    }
+    impMsgEl.textContent = "";
+
+    imposiciones = leerImposiciones();
+    guardarImposiciones(imposiciones);
+    ultimaPorNivel = {};
+    modo = imposiciones.length > 0 ? modoElegido : null;
+
+    if(modo === "actividad"){
+      empezarRondaActividad();
+    }else if(modo === "ronda"){
+      empezarRondaCompleta();
+    }else{
+      generarRutinaCompleta();
+    }
+  }
+
+  inicioEl.addEventListener("click", ()=>{
+    inicioEl.style.display = "none";
+    imposicionesEl.style.display = "flex";
+    actualizarBotones();
+  });
+
+  btnComenzar.addEventListener("click", ()=> arrancar(null));
+  btnPorActividad.addEventListener("click", ()=> arrancar("actividad"));
+  btnPorRonda.addEventListener("click", ()=> arrancar("ronda"));
+
   btnSiguiente.addEventListener("click", ()=>{
-    generarRutina();
+    if(modo === "actividad"){
+      if(turno < ARCHIVOS.length){
+        pedirImposicion(agregarActividad);
+      }else{
+        empezarRondaActividad();
+      }
+    }else if(modo === "ronda"){
+      empezarRondaCompleta();
+    }else{
+      generarRutinaCompleta();
+    }
   });
 
   btnVolver.addEventListener("click", ()=>{
-    resultadoEl.style.display = "none";
-    inicioEl.style.display = "flex";
-    inicioMsgEl.textContent = "";
+    mostrarInicio();
   });
+
+  recordarImposiciones();
+  actualizarBotones();
 
 })();
 </script>
