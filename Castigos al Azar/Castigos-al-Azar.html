@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Reproductor Aleatorio</title>
+<title>Castigos al Azar</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -110,6 +110,60 @@
     max-width: 300px;
   }
 
+  .rangos{
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .rango{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .rango label{
+    font-size: .74rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .rango input{
+    width: 82px;
+    text-align: center;
+    font-size: 1.2rem;
+    color: var(--fg);
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 10px;
+    outline: none;
+  }
+  .rango input:focus{ border-color: var(--teal); }
+
+  .modos{
+    display: flex;
+    margin-bottom: 24px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .modo{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.95rem;
+    letter-spacing:.04em;
+    padding: 10px 28px;
+    background: transparent;
+    color: var(--fg-muted);
+    border: none;
+    cursor: pointer;
+  }
+  .modo.activo{
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+  }
+
   /* --- pantalla de reproducción --- */
   .pulso-wrap{
     width:120px; height:120px;
@@ -150,10 +204,27 @@
 <body>
 
 <div id="inicio">
-  <p class="eyebrow">Sonido &middot; Frases</p>
+  <p class="eyebrow">Castigos al Azar</p>
   <h1>Reproductor Aleatorio</h1>
   <div class="rule"></div>
-  <p class="desc">Reproduce frases al azar de la carpeta, con pausas variables entre cada una.</p>
+  <p class="desc">Elige audio o texto. En los dos casos reproduce un castigo al azar, con pausas variables entre cada uno.</p>
+
+  <div class="modos">
+    <button type="button" class="modo activo" data-modo="audio" aria-pressed="true">Audio</button>
+    <button type="button" class="modo" data-modo="texto" aria-pressed="false">Texto</button>
+  </div>
+
+  <div class="rangos">
+    <div class="rango">
+      <label for="minMinutos">Mínimo</label>
+      <input id="minMinutos" type="number" min="0" step="0.5" value="5" inputmode="decimal">
+    </div>
+    <div class="rango">
+      <label for="maxMinutos">Máximo</label>
+      <input id="maxMinutos" type="number" min="0" step="0.5" value="10" inputmode="decimal">
+    </div>
+  </div>
+
   <button id="btnInicio">INICIAR</button>
   <div id="msgInicio"></div>
 </div>
@@ -172,16 +243,41 @@
 //==============================
 const USUARIO = "fredyhb999-dev";
 const REPO    = "Juego-Actividades";
-const CARPETA = "Sonido-Frases";
+const CARPETA = "Castigos al Azar";
+const ARCHIVO_TEXTOS = "Castigos al Azar.json";
 //==============================
 
 const player = document.getElementById("player");
 const btnInicio = document.getElementById("btnInicio");
 const msgInicio = document.getElementById("msgInicio");
+const minInput = document.getElementById("minMinutos");
+const maxInput = document.getElementById("maxMinutos");
+const botonesModo = Array.from(document.querySelectorAll(".modo"));
 
 let audios = [];
+let textos = [];
 let ultimoAudio = -1;
+let ultimoTexto = -1;
+let modoActual = "audio";
 let wakeLock = null;
+let pausaMin = 5;
+let pausaMax = 10;
+
+botonesModo.forEach(boton=>{
+    boton.addEventListener("click",()=>{
+        modoActual = boton.dataset.modo;
+        botonesModo.forEach(b=>{
+            const activo = (b===boton);
+            b.classList.toggle("activo",activo);
+            b.setAttribute("aria-pressed",activo ? "true" : "false");
+        });
+    });
+});
+
+// Despierta la lista de voces del teléfono antes de usarla.
+if("speechSynthesis" in window){
+    speechSynthesis.getVoices();
+}
 
 const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 
@@ -246,6 +342,64 @@ function reproducir(src){
     });
 }
 //---------------------------------------------
+// Texto: las acciones se leen con la voz del teléfono
+//---------------------------------------------
+async function cargarTextos(){
+    const res=await fetch(encodeURIComponent(ARCHIVO_TEXTOS),{cache:"no-store"});
+    if(!res.ok){
+        throw new Error("No se pudo leer "+ARCHIVO_TEXTOS);
+    }
+    const datos=await res.json();
+    if(!Array.isArray(datos)){
+        throw new Error("El archivo de textos no es una lista");
+    }
+    return datos
+        .filter(texto=>typeof texto==="string" && texto.trim().length>0)
+        .map(texto=>texto.trim());
+}
+//---------------------------------------------
+function obtenerTextoAleatorio(){
+    if(textos.length===1){
+        ultimoTexto=0;
+        return 0;
+    }
+    let indice;
+    do{
+        indice=Math.floor(Math.random()*textos.length);
+    }while(indice===ultimoTexto);
+    ultimoTexto=indice;
+    return indice;
+}
+//---------------------------------------------
+function vozEnEspanol(){
+    if(!("speechSynthesis" in window)){
+        return null;
+    }
+    const voces=speechSynthesis.getVoices();
+    return voces.find(voz=>String(voz.lang).toLowerCase().startsWith("es")) || null;
+}
+//---------------------------------------------
+function decir(texto){
+    return new Promise(resolve=>{
+        if(!("speechSynthesis" in window)){
+            setTimeout(resolve,1500);
+            return;
+        }
+        const frase=new SpeechSynthesisUtterance(texto);
+        const voz=vozEnEspanol();
+        if(voz){
+            frase.voice=voz;
+            frase.lang=voz.lang;
+        }else{
+            frase.lang="es-ES";
+        }
+        frase.rate=1;
+        frase.onend=resolve;
+        frase.onerror=resolve;
+        speechSynthesis.speak(frase);
+    });
+}
+//---------------------------------------------
 function esperar(minutos){
     return new Promise(resolve=>{
         setTimeout(resolve,minutos*60*1000);
@@ -254,34 +408,83 @@ function esperar(minutos){
 //---------------------------------------------
 async function iniciar(){
     while(true){
-        const indice = obtenerAudioAleatorio();
-        await reproducir(audios[indice]);
-        const pausa = Math.floor(Math.random()*6)+5;
+        if(modoActual==="texto"){
+            const indice = obtenerTextoAleatorio();
+            await decir(textos[indice]);
+        }else{
+            const indice = obtenerAudioAleatorio();
+            await reproducir(audios[indice]);
+        }
+        const pausa = pausaMin + Math.random()*(pausaMax - pausaMin);
         await esperar(pausa);
     }
 }
 //---------------------------------------------
 btnInicio.addEventListener("click", async ()=>{
 
-    btnInicio.disabled=true;
-    msgInicio.textContent="Cargando lista de audios...";
+    const minValor = parseFloat(minInput.value);
+    const maxValor = parseFloat(maxInput.value);
 
-    try{
-        audios = await cargarAudios();
-    }catch(e){
-        msgInicio.textContent="Error al cargar los audios. Revisa tu conexión.";
-        btnInicio.disabled=false;
+    if(isNaN(minValor) || minValor < 0){
+        msgInicio.textContent = "Escribe un mínimo válido (0 o más).";
+        return;
+    }
+    if(isNaN(maxValor) || maxValor < 0){
+        msgInicio.textContent = "Escribe un máximo válido (0 o más).";
+        return;
+    }
+    if(maxValor < minValor){
+        msgInicio.textContent = "El máximo debe ser igual o mayor que el mínimo.";
         return;
     }
 
-    if(audios.length===0){
-        msgInicio.textContent="No se encontraron audios en la carpeta.";
-        btnInicio.disabled=false;
-        return;
+    pausaMin = minValor;
+    pausaMax = maxValor;
+
+    btnInicio.disabled=true;
+
+    if(modoActual==="texto"){
+        msgInicio.textContent="Cargando textos...";
+        try{
+            textos = await cargarTextos();
+        }catch(e){
+            msgInicio.textContent="No se encontró el archivo \u201C"+ARCHIVO_TEXTOS+"\u201D.";
+            btnInicio.disabled=false;
+            return;
+        }
+        if(textos.length===0){
+            msgInicio.textContent="El archivo de textos está vacío.";
+            btnInicio.disabled=false;
+            return;
+        }
+    }else{
+        msgInicio.textContent="Cargando lista de audios...";
+        try{
+            audios = await cargarAudios();
+        }catch(e){
+            msgInicio.textContent="Error al cargar los audios. Revisa tu conexión.";
+            btnInicio.disabled=false;
+            return;
+        }
+        if(audios.length===0){
+            msgInicio.textContent="No se encontraron audios en la carpeta.";
+            btnInicio.disabled=false;
+            return;
+        }
     }
 
     document.getElementById("inicio").style.display="none";
     document.getElementById("estado").style.display="flex";
+
+    const tituloEstado=document.querySelector("#estado .title");
+    const subEstado=document.querySelector("#estado .subtitle");
+    if(modoActual==="texto"){
+        tituloEstado.textContent="Leyendo...";
+        subEstado.textContent="Castigos aleatorios en curso";
+    }else{
+        tituloEstado.textContent="Reproduciendo...";
+        subEstado.textContent="Frases aleatorias en curso";
+    }
 
     // Se solicitan, pero no se espera a que terminen.
     pantallaCompleta();
