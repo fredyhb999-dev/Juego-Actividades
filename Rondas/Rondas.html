@@ -4,7 +4,7 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover">
-<title>Juego de Actividades</title>
+<title>Juego por Rondas</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -146,7 +146,7 @@ button:disabled{ opacity:.5; cursor:default; }
 
 <div id="app">
 <div id="setup">
-<p class="eyebrow">Juego de Actividades</p>
+<p class="eyebrow">Juego por Rondas</p>
 <h2>¿Cuántas rondas?</h2>
 <input id="rounds" type="number" min="1" value="">
 <button id="start" disabled>Cargando actividades...</button>
@@ -163,10 +163,10 @@ button:disabled{ opacity:.5; cursor:default; }
 <script>
 
 // ======= ARCHIVO EXTERNO CON LAS ACTIVIDADES =======
-// Edita "Actividades.json" (junto a este HTML) para cambiar la rutina.
+// Edita "Rondas.json" (junto a este HTML) para cambiar la rutina.
 // Debe ser un arreglo JSON de textos, por ejemplo:
 // ["hacer lagartijas", "sentadillas", "correr"]
-const ARCHIVO_ACTIVIDADES = "Actividades.json";
+const ARCHIVO_ACTIVIDADES = "Rondas.json";
 // ====================================================
 
 let wakeLock = null;
