@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Rep Audios esp Minutos</title>
+<title>Actividades en Audio por Tiempo</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,6 +43,7 @@
     display:flex; flex-direction:column;
     align-items:center; justify-content:center;
     text-align:center; padding:24px;
+    overflow-y:auto;
     background:
       radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
       radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
@@ -73,6 +74,13 @@
     width:100%; max-width:200px;
     font-size:1.4rem; text-align:center;
     padding:12px; margin-bottom:0;
+    border-radius:12px; border:1px solid var(--card-border);
+    background: var(--card); color:var(--fg);
+  }
+  #config select{
+    width:100%; max-width:260px;
+    font-size:1.05rem; text-align:center; text-align-last:center;
+    padding:12px;
     border-radius:12px; border:1px solid var(--card-border);
     background: var(--card); color:var(--fg);
   }
@@ -172,8 +180,13 @@
 <body>
 
 <div id="config">
-  <div class="eyebrow">Rep Audios esp Minutos</div>
+  <div class="eyebrow">Actividades en Audio por Tiempo</div>
   <h1>Configura la reproducción</h1>
+
+  <div class="campo">
+    <label for="tema">Tema</label>
+    <select id="tema"></select>
+  </div>
 
   <div class="campo">
     <label for="minutos">Minutos entre cada audio</label>
@@ -212,13 +225,14 @@
 //==============================
 const USUARIO = "fredyhb999-dev";
 const REPO    = "Juego-Actividades";
-const CARPETA = "Audio c 4 Minutos";
+const CARPETA = "Actividades en Audio por Tiempo";
 const SUBCARPETA_0 = "Principiante"; // se reproduce completa una sola vez, al inicio
 const SUBCARPETA_1 = "Avanzado"; // se reproduce primero en cada vuelta
 const SUBCARPETA_2 = "Experto";  // se reproduce al final de cada vuelta
 //==============================
 
 const configEl=document.getElementById("config");
+const temaSelect=document.getElementById("tema");
 const minutosInput=document.getElementById("minutos");
 const proporcionInput=document.getElementById("proporcion");
 const btnIniciar=document.getElementById("btnIniciar");
@@ -244,6 +258,8 @@ let ultimoExperto=null;
 let proporcion=2; // audios de Avanzado por cada 1 de Experto
 let pasoCiclo=0;   // cuántos "Avanzado" van reproducidos desde el último "Experto"
 let minutosEspera=4;
+let temaActual="";
+let temaGuardado="";
 let wakeLock=null;
 let pausadoManual=false;
 let intervalo=null;
@@ -290,6 +306,7 @@ function cargarCfg(){
         const c=JSON.parse(raw);
         if(c.minutos) minutosInput.value=c.minutos;
         if(c.proporcion) proporcionInput.value=c.proporcion;
+        if(c.tema) temaGuardado=c.tema;
     }catch(e){}
 }
 
@@ -297,9 +314,52 @@ function guardarCfg(){
     try{
         localStorage.setItem(CLAVE_CFG,JSON.stringify({
             minutos:minutosInput.value,
-            proporcion:proporcionInput.value
+            proporcion:proporcionInput.value,
+            tema:temaSelect.value
         }));
     }catch(e){}
+}
+
+//---------------------------------------------
+// Los temas son las carpetas que hay dentro de CARPETA.
+// Cada tema debe traer sus niveles (Principiante, Avanzado, Experto).
+//---------------------------------------------
+async function cargarTemas(){
+    temaSelect.innerHTML="<option value=''>Cargando temas...</option>";
+    const url="https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+encodeURIComponent(CARPETA);
+    const res=await fetch(url);
+    if(!res.ok){
+        throw new Error("No se pudo leer la carpeta de temas");
+    }
+    const datos=await res.json();
+    const temas=datos
+        .filter(item=>item.type==="dir")
+        .map(item=>item.name)
+        .sort((a,b)=>a.localeCompare(b,"es"));
+
+    temaSelect.innerHTML="";
+    if(temas.length===0){
+        temaSelect.innerHTML="<option value=''>No hay temas</option>";
+        return;
+    }
+    temas.forEach(nombre=>{
+        const opcion=document.createElement("option");
+        opcion.value=nombre;
+        opcion.textContent=nombre;
+        temaSelect.appendChild(opcion);
+    });
+    if(temaGuardado && temas.includes(temaGuardado)){
+        temaSelect.value=temaGuardado;
+    }
+}
+
+async function iniciarTemas(){
+    try{
+        await cargarTemas();
+    }catch(e){
+        temaSelect.innerHTML="<option value=''>No se pudieron cargar</option>";
+        configMsg.textContent="No se pudieron cargar los temas. Recarga la página.";
+    }
 }
 
 //---------------------------------------------
@@ -322,6 +382,10 @@ document.addEventListener("visibilitychange",async()=>{
 async function listarAudiosDe(ruta){
     const url="https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+encodeURIComponent(ruta);
     const res=await fetch(url);
+    // Un tema puede no tener alguno de los niveles: se usa con lo que haya.
+    if(res.status===404){
+        return [];
+    }
     if(!res.ok){
         throw new Error("No se pudo leer la carpeta: "+ruta);
     }
@@ -330,13 +394,14 @@ async function listarAudiosDe(ruta){
     return lista.map(item=>({nombre:nombreVisible(item.name),url:item.download_url}));
 }
 
-async function cargarAudios(){
-    const listaPrincipiante=await listarAudiosDe(CARPETA+"/"+SUBCARPETA_0);
+async function cargarAudios(tema){
+    const raiz=CARPETA+"/"+tema;
+    const listaPrincipiante=await listarAudiosDe(raiz+"/"+SUBCARPETA_0);
     listaPrincipiante.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
     colaPrincipiante=listaPrincipiante;
 
-    listaAvanzado=await listarAudiosDe(CARPETA+"/"+SUBCARPETA_1);
-    listaExperto=await listarAudiosDe(CARPETA+"/"+SUBCARPETA_2);
+    listaAvanzado=await listarAudiosDe(raiz+"/"+SUBCARPETA_1);
+    listaExperto=await listarAudiosDe(raiz+"/"+SUBCARPETA_2);
 }
 
 //---------------------------------------------
@@ -427,7 +492,7 @@ function reproducir(item){
         fallosConsecutivos=0;
         player.className="playing";
         icono.textContent="⏸";
-        categoriaAudio.textContent=item.categoria || "";
+        categoriaAudio.textContent=temaActual ? temaActual+" · "+(item.categoria || "") : (item.categoria || "");
         categoriaAudio.className="visible";
         nombre.textContent=nombreMostrar(item);
         estadoPlayer.textContent="Reproduciendo";
@@ -591,8 +656,14 @@ btnSiguiente.onclick=(e)=>{
 //---------------------------------------------
 btnIniciar.onclick=async()=>{
 
+    const tema=temaSelect.value;
     const minutosValor=parseFloat(minutosInput.value);
     const proporcionValor=parseInt(proporcionInput.value,10);
+
+    if(!tema){
+        configMsg.textContent="Elige un tema para reproducir.";
+        return;
+    }
 
     if(!minutosValor || minutosValor<=0){
         configMsg.textContent="Escribe un número válido de minutos (0.5 o más).";
@@ -606,12 +677,13 @@ btnIniciar.onclick=async()=>{
 
     minutosEspera=minutosValor;
     proporcion=proporcionValor;
+    temaActual=tema;
     guardarCfg();
     configMsg.textContent="Cargando lista de audios...";
     btnIniciar.disabled=true;
 
     try{
-        await cargarAudios();
+        await cargarAudios(tema);
     }catch(e){
         configMsg.textContent="Error al cargar los audios. Revisa tu conexión.";
         btnIniciar.disabled=false;
@@ -619,7 +691,7 @@ btnIniciar.onclick=async()=>{
     }
 
     if(colaPrincipiante.length===0 && listaAvanzado.length===0 && listaExperto.length===0){
-        configMsg.textContent="No se encontraron audios en ninguna de las carpetas.";
+        configMsg.textContent="No se encontraron audios en ese tema.";
         btnIniciar.disabled=false;
         return;
     }
@@ -644,6 +716,7 @@ btnIniciar.onclick=async()=>{
 };
 
 cargarCfg();
+iniciarTemas();
 
 </script>
 
