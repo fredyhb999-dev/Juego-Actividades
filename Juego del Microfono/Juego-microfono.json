@@ -1,0 +1,28 @@
+{
+  "actividades": [
+    "No te rías",
+    "Baila como gallina",
+    "Dile un cumplido al oído",
+    "Haz una careta graciosa",
+    "Susurra algo dulce",
+    "Imita a un animal",
+    "No parpadees por 5 segundos",
+    "Habla como robot",
+    "Haz el sonido de una vaca",
+    "Dale un masaje en los hombros"
+  ],
+  "animo": [
+    "No es suficiente",
+    "Más fuerte",
+    "Todavía no",
+    "Otra vez, con ganas",
+    "Casi, pero no"
+  ],
+  "exito": [
+    "¡Vaya!",
+    "Al fin lo lograste",
+    "Una más",
+    "¡Eso es!",
+    "Perfecto"
+  ]
+}

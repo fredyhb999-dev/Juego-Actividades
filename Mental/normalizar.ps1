@@ -1,4 +1,4 @@
-$root   = "C:\Users\Fred\Documents\GitHub\Juego-Actividades\Mental"
+$root   = "D:\Github\Juego-Actividades\Mental"
 $marker = "NORMALIZADO v2 I=-16 TP=-1.5"
 
 $files = Get-ChildItem -LiteralPath $root -Recurse -File -Filter *.mp3 |

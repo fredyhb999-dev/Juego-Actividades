@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juego del Micrófono</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f172a;
+    color: #f8fafc;
+    min-height: 100dvh;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    margin: auto;
+    background: #1e293b;
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  h1 { font-size: 1.1rem; margin-bottom: 16px; text-align: center; color: #94a3b8; }
+  .hidden { display: none !important; }
+
+  /* Configuración y calibración */
+  .calibrando { text-align: center; }
+  .calibrando p { margin-bottom: 12px; color: #cbd5e1; font-size: .9rem; }
+
+  .modos {
+    display: flex; margin-bottom: 18px;
+    background: #0f172a; border: 1px solid #334155; border-radius: 12px;
+    overflow: hidden;
+  }
+  .modo {
+    flex: 1; padding: 12px 8px; border: none; cursor: pointer;
+    background: transparent; color: #94a3b8;
+    font-family: inherit; font-weight: 700; font-size: .9rem;
+  }
+  .modo.activo { background: #38bdf8; color: #0f172a; }
+
+  .campo { margin-bottom: 16px; text-align: left; }
+  .campo label {
+    display: flex; justify-content: space-between;
+    font-size: .85rem; color: #94a3b8; margin-bottom: 6px;
+  }
+  .campo label span { color: #f8fafc; font-weight: 700; }
+  .campo input[type=range] { width: 100%; accent-color: #38bdf8; }
+
+  .barra-base {
+    width: 100%; height: 10px; background: #334155; border-radius: 6px; overflow: hidden; margin-bottom: 16px;
+  }
+  .nivel-base {
+    height: 100%; width: 0%; background: #38bdf8; transition: width 0.1s;
+  }
+  .btn-calibrar {
+    width: 100%; padding: 16px; border: none; border-radius: 12px;
+    background: #38bdf8; color: #000; font-weight: 700; font-size: 1rem; cursor: pointer;
+  }
+  .btn-calibrar:active { opacity: 0.9; }
+
+  /* Juego */
+  .chip {
+    display: block; width: fit-content; margin: 0 auto 12px;
+    padding: 4px 14px; border-radius: 999px;
+    background: #0f172a; border: 1px solid #334155;
+    color: #38bdf8; font-size: .7rem; font-weight: 700;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .accion {
+    font-size: 1.6rem; font-weight: 800; text-align: center; line-height: 1.2;
+    margin: 6px 0; color: #fbbf24; min-height: 110px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .estado { text-align: center; color: #94a3b8; font-size: .9rem; min-height: 22px; margin-bottom: 6px; }
+
+  .medidor-container {
+    position: relative; height: 120px; margin: 14px 0 18px; border: 1px solid #334155;
+    border-radius: 12px; background: #0f172a; overflow: hidden;
+  }
+  .medidor-barras {
+    display: flex; align-items: flex-end; height: 100%; width: 100%; gap: 4px; padding: 4px;
+  }
+  .barra {
+    flex: 1; background: #22d3ee; border-radius: 2px 2px 0 0;
+    transition: height 0.12s linear, background 0.2s linear;
+  }
+  .umbral-linea {
+    position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #ef4444;
+    transform: translateY(-50%); pointer-events: none; z-index: 2;
+  }
+  .umbral-label {
+    position: absolute; left: 6px; top: 2px; transform: translateY(-100%);
+    font-size: 0.75rem; color: #ef4444; background: #0f172a; padding: 0 4px; border-radius: 4px;
+  }
+
+  .nivel-live { font-size: 0.85rem; color: #94a3b8; text-align: center; margin-top: 8px; }
+  .nivel-live strong { color: #f8fafc; }
+
+  .umbral-control {
+    margin: 12px 0; padding: 12px; background: #334155; border-radius: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .umbral-control label { font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-between; }
+  .umbral-control input[type=range] { width: 100%; accent-color: #38bdf8; }
+
+  .btn-accion {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: #3b82f6; color: #fff; font-family: inherit;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-accion.secundaria { background: #475569; margin-top: 12px; }
+  .btn-accion:active { opacity: 0.9; }
+
+  .permiso-msg {
+    display: none; margin-bottom: 14px; padding: 12px; border-radius: 12px; font-size: 0.85rem;
+    line-height: 1.4; text-align: left; background: #7f1d1d; color: #fecaca;
+  }
+  .permiso-msg.visible { display: block; }
+  .permiso-msg.info { background: #334155; color: #cbd5e1; }
+
+  .aviso { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 16px; line-height: 1.4; }
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Pantalla de configuración y calibración -->
+  <section id="pantalla-calibracion" class="calibrando">
+    <h1>Juego del Micrófono</h1>
+
+    <div class="modos">
+      <button type="button" class="modo activo" data-modo="escucha" aria-pressed="true">Solo escucha</button>
+      <button type="button" class="modo" data-modo="supervision" aria-pressed="false">Supervisión</button>
+    </div>
+
+    <div class="campo">
+      <label for="seg-silencio">Segundos de silencio <span id="valor-silencio">10</span></label>
+      <input type="range" id="seg-silencio" min="3" max="60" step="1" value="10">
+    </div>
+
+    <div class="campo hidden" id="campo-insistir">
+      <label for="seg-insistir">Insistir cada (s) <span id="valor-insistir">10</span></label>
+      <input type="range" id="seg-insistir" min="3" max="60" step="1" value="10">
+    </div>
+
+    <div class="barra-base">
+      <div class="nivel-base" id="nivel-base"></div>
+    </div>
+
+    <p id="texto-calibracion">Mantén silencio normal en la habitación</p>
+
+    <div class="permiso-msg info visible" id="permiso-msg">Al iniciar, el navegador te pedirá permiso para usar el micrófono. Toca <strong>Permitir</strong>.</div>
+
+    <button class="btn-calibrar" id="btn-iniciar">Iniciar calibración</button>
+  </section>
+
+  <!-- Pantalla del juego -->
+  <section id="pantalla-juego" class="hidden">
+    <div class="chip" id="chip-modo">Solo escucha</div>
+
+    <div class="accion" id="texto-accion">Escuchando…</div>
+    <div class="estado" id="texto-estado"></div>
+
+    <div class="medidor-container">
+      <div class="medidor-barras" id="medidor-barras"></div>
+      <div class="umbral-linea" id="umbral-linea"></div>
+      <div class="umbral-label" id="umbral-label">Ruido</div>
+    </div>
+
+    <div class="umbral-control hidden" id="control-objetivo">
+      <label>Nivel a alcanzar <span id="valor-objetivo">60</span></label>
+      <input type="range" id="slider-objetivo" min="10" max="100" step="1" value="60">
+    </div>
+
+    <div class="nivel-live">Nivel: <strong id="nivel-actual">0%</strong> · <span id="etiqueta-linea">Ruido</span>: <strong id="nivel-limite">0%</strong></div>
+
+    <button class="btn-accion secundaria" id="btn-terminar">Terminar</button>
+  </section>
+
+  <div class="aviso">
+    El micrófono solo mide el volumen en tiempo real. No graba, no guarda ni envía audio a ningún servidor.
+  </div>
+
+</div>
+
+<script>
+const ARCHIVO_TEXTOS = "Juego-microfono.json";
+
+// ===== Estado =====
+let audioCtx, analyser, micStream, dataArray;
+let calibrado = false;
+let noiseBase = 0;
+let umbralRuido = 40;   // nivel a partir del cual se considera que hay sonido
+let objetivo = 60;      // nivel a alcanzar en supervisión
+let nivelSuave = null;
+let rafId = null;
+
+let modo = "escucha";
+let segSilencio = 10;
+let segInsistir = 10;
+
+let activo = false;
+let fase = "escuchando";   // escuchando | actividad
+let ultimoRuido = 0;
+let ultimoAviso = 0;
+let hablando = false;
+let resguardoVoz = null;
+
+let datos = { actividades: [], animo: [], exito: [] };
+let ultimaActividad = -1;
+let ultimoAnimo = -1;
+let ultimoExito = -1;
+
+// ===== Elementos =====
+const pantallaCalibracion = document.getElementById("pantalla-calibracion");
+const pantallaJuego = document.getElementById("pantalla-juego");
+
+const botonesModo = Array.from(document.querySelectorAll(".modo"));
+const campoInsistir = document.getElementById("campo-insistir");
+const sliderSilencio = document.getElementById("seg-silencio");
+const valorSilencio = document.getElementById("valor-silencio");
+const sliderInsistir = document.getElementById("seg-insistir");
+const valorInsistir = document.getElementById("valor-insistir");
+
+const nivelBase = document.getElementById("nivel-base");
+const textoCalibracion = document.getElementById("texto-calibracion");
+const permisoMsg = document.getElementById("permiso-msg");
+const btnIniciar = document.getElementById("btn-iniciar");
+
+const chipModo = document.getElementById("chip-modo");
+const textoAccion = document.getElementById("texto-accion");
+const textoEstado = document.getElementById("texto-estado");
+
+const medidorBarras = document.getElementById("medidor-barras");
+const umbralLinea = document.getElementById("umbral-linea");
+const umbralLabel = document.getElementById("umbral-label");
+
+const controlObjetivo = document.getElementById("control-objetivo");
+const sliderObjetivo = document.getElementById("slider-objetivo");
+const valorObjetivo = document.getElementById("valor-objetivo");
+
+const nivelActualEl = document.getElementById("nivel-actual");
+const nivelLimiteEl = document.getElementById("nivel-limite");
+const etiquetaLinea = document.getElementById("etiqueta-linea");
+
+const btnTerminar = document.getElementById("btn-terminar");
+
+// Barras del medidor: cada una con altura fija de referencia (más alta al centro).
+const pesosBarras = [];
+const centroBarras = (30 - 1) / 2;
+for (let i = 0; i < 30; i++) {
+  const b = document.createElement("div");
+  b.className = "barra";
+  b.style.height = "0%";
+  const cercania = 1 - Math.abs(i - centroBarras) / centroBarras;
+  pesosBarras.push(0.65 + 0.35 * cercania);
+  medidorBarras.appendChild(b);
+}
+const barras = medidorBarras.querySelectorAll(".barra");
+
+// Despierta la lista de voces del teléfono antes de usarla.
+if ("speechSynthesis" in window) {
+  speechSynthesis.getVoices();
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+// ===== Permisos =====
+function mostrarPermisoMsg(html, info) {
+  permisoMsg.innerHTML = html;
+  permisoMsg.className = "permiso-msg visible" + (info ? " info" : "");
+}
+
+function mensajeError(err) {
+  const pasos = '<br><br><strong>En Android (Chrome):</strong><br>1. Toca el candado junto a la dirección → Permisos → Micrófono → Permitir.<br>2. Si no aparece: Chrome ⋮ → Configuración → Configuración de sitios → Micrófono.<br>3. Ajustes de Android → Apps → Chrome → Permisos → Micrófono → Permitir.<br>Luego recarga la página.';
+  switch (err && err.name) {
+    case "NotAllowedError":
+    case "PermissionDeniedError":
+      return "Permiso de micrófono denegado." + pasos;
+    case "NotFoundError":
+      return "No se encontró ningún micrófono en este dispositivo.";
+    case "NotReadableError":
+      return "El micrófono está siendo usado por otra app. Ciérrala e inténtalo de nuevo.";
+    case "SecurityError":
+      return "El navegador bloqueó el micrófono por seguridad. Abre la página desde un enlace HTTPS.";
+    default:
+      return "No se pudo acceder al micrófono (" + (err && err.name ? err.name : "error") + ")." + pasos;
+  }
+}
+
+// ===== Micrófono =====
+async function iniciarAudio() {
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    const e = new Error("Contexto no seguro");
+    e.name = "SecurityError";
+    throw e;
+  }
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false
+    }
+  });
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === "suspended") await audioCtx.resume();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  const source = audioCtx.createMediaStreamSource(micStream);
+  source.connect(analyser);
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+}
+
+function obtenerRMS() {
+  analyser.getByteTimeDomainData(dataArray);
+  let suma = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    const dif = dataArray[i] - 128;
+    suma += dif * dif;
+  }
+  return Math.sqrt(suma / dataArray.length);
+}
+
+function rmsADecibeles(rms) {
+  if (rms <= 0) return -100;
+  return 20 * Math.log10(rms / 128);
+}
+
+function rmsANivel(rms) {
+  const db = rmsADecibeles(rms);
+  const minDb = -60;
+  const pct = ((db - minDb) / (0 - minDb)) * 100;
+  return Math.max(0, Math.min(100, pct));
+}
+
+// ===== Voz =====
+function vozEnEspanol() {
+  if (!("speechSynthesis" in window)) return null;
+  return speechSynthesis.getVoices().find(voz => String(voz.lang).toLowerCase().startsWith("es")) || null;
+}
+
+function decir(texto, alTerminar) {
+  if (!texto) {
+    if (alTerminar) alTerminar();
+    return;
+  }
+  if (!("speechSynthesis" in window)) {
+    if (alTerminar) alTerminar();
+    return;
+  }
+
+  hablando = true;
+  let terminado = false;
+
+  const fin = () => {
+    if (terminado) return;
+    terminado = true;
+    hablando = false;
+    if (resguardoVoz) {
+      clearTimeout(resguardoVoz);
+      resguardoVoz = null;
+    }
+    if (alTerminar) alTerminar();
+  };
+
+  try {
+    speechSynthesis.cancel();
+    const frase = new SpeechSynthesisUtterance(texto);
+    const voz = vozEnEspanol();
+    if (voz) {
+      frase.voice = voz;
+      frase.lang = voz.lang;
+    } else {
+      frase.lang = "es-ES";
+    }
+    frase.rate = 1;
+    frase.onend = fin;
+    frase.onerror = fin;
+    speechSynthesis.speak(frase);
+  } catch (e) {
+    fin();
+    return;
+  }
+
+  // Resguardo: si el navegador no avisa que terminó, no se queda trabado.
+  if (resguardoVoz) clearTimeout(resguardoVoz);
+  resguardoVoz = setTimeout(fin, 3000 + texto.length * 110);
+}
+
+// ===== Textos =====
+async function cargarTextos() {
+  const res = await fetch(encodeURIComponent(ARCHIVO_TEXTOS), { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("No se encontró " + ARCHIVO_TEXTOS + ".");
+  }
+  const json = await res.json();
+  const limpiar = lista => Array.isArray(lista)
+    ? lista.filter(t => typeof t === "string" && t.trim().length > 0).map(t => t.trim())
+    : [];
+
+  const d = {
+    actividades: limpiar(json.actividades),
+    animo: limpiar(json.animo),
+    exito: limpiar(json.exito)
+  };
+  if (d.actividades.length === 0) {
+    throw new Error("El archivo no tiene actividades.");
+  }
+  return d;
+}
+
+function elegirDe(lista, evitar) {
+  if (!lista || lista.length === 0) return { texto: "", indice: -1 };
+  if (lista.length === 1) return { texto: lista[0], indice: 0 };
+  let indice;
+  do {
+    indice = Math.floor(Math.random() * lista.length);
+  } while (indice === evitar);
+  return { texto: lista[indice], indice };
+}
+
+// ===== Juego =====
+function actualizarMedidor() {
+  if (!calibrado) return;
+
+  const ahora = performance.now();
+
+  // Mientras la app habla se ignora el micrófono (su propia voz no cuenta).
+  if (hablando) {
+    rafId = requestAnimationFrame(actualizarMedidor);
+    return;
+  }
+
+  const rms = obtenerRMS();
+  const nivelCrudo = rmsANivel(rms);
+
+  if (nivelSuave === null) {
+    nivelSuave = nivelCrudo;
+  } else if (nivelCrudo > nivelSuave) {
+    nivelSuave += (nivelCrudo - nivelSuave) * 0.35;
+  } else {
+    nivelSuave += (nivelCrudo - nivelSuave) * 0.08;
+  }
+
+  const nivel = nivelSuave < 2 ? 0 : nivelSuave;
+
+  nivelActualEl.textContent = Math.round(nivel) + "%";
+
+  barras.forEach((b, i) => {
+    const h = Math.min(nivel * pesosBarras[i], 100);
+    b.style.height = h + "%";
+    b.style.background = h > objetivo && modo === "supervision" ? "#f87171" : "#22d3ee";
+  });
+
+  const linea = modo === "supervision" ? objetivo : umbralRuido;
+  umbralLinea.style.top = (100 - clamp(linea, 0, 100)) + "%";
+  nivelLimiteEl.textContent = Math.round(linea) + "%";
+
+  if (nivel >= umbralRuido) ultimoRuido = ahora;
+
+  if (activo) {
+    if (modo === "escucha") {
+      if (ahora - ultimoRuido >= segSilencio * 1000) {
+        anunciarActividad();
+      }
+    } else if (fase === "escuchando") {
+      if (ahora - ultimoRuido >= segSilencio * 1000) {
+        anunciarActividad();
+      }
+    } else {
+      // Fase "actividad": hay que llegar al nivel.
+      if (nivel >= objetivo) {
+        fase = "escuchando";
+        textoEstado.textContent = "¡Logrado!";
+        const e = elegirDe(datos.exito, ultimoExito);
+        ultimoExito = e.indice;
+        if (e.texto) {
+          decir(e.texto, () => {
+            ultimoRuido = performance.now();
+            ultimoAviso = performance.now();
+            textoAccion.textContent = "Escuchando…";
+            textoEstado.textContent = "";
+          });
+        } else {
+          ultimoRuido = ahora;
+          textoAccion.textContent = "Escuchando…";
+        }
+      } else if (ahora - ultimoAviso >= segInsistir * 1000) {
+        ultimoAviso = ahora;
+        if (datos.animo.length > 0) {
+          const e = elegirDe(datos.animo, ultimoAnimo);
+          ultimoAnimo = e.indice;
+          textoEstado.textContent = "Falta más";
+          decir(e.texto);
+        }
+      }
+    }
+  }
+
+  rafId = requestAnimationFrame(actualizarMedidor);
+}
+
+function anunciarActividad() {
+  if (hablando) return;
+
+  const e = elegirDe(datos.actividades, ultimaActividad);
+  ultimaActividad = e.indice;
+  textoAccion.textContent = e.texto;
+
+  if (modo === "supervision") {
+    fase = "actividad";
+    textoEstado.textContent = "Haz la actividad hasta alcanzar el nivel";
+  } else {
+    textoEstado.textContent = "Actividad sugerida";
+  }
+
+  decir("No he escuchado nada en " + segSilencio + " segundos. " + e.texto, () => {
+    ultimoRuido = performance.now();
+    ultimoAviso = performance.now();
+  });
+}
+
+function iniciarJuego() {
+  chipModo.textContent = modo === "supervision" ? "Supervisión" : "Solo escucha";
+  controlObjetivo.classList.toggle("hidden", modo !== "supervision");
+  etiquetaLinea.textContent = modo === "supervision" ? "Nivel" : "Ruido";
+  umbralLabel.textContent = modo === "supervision" ? "Nivel" : "Ruido";
+
+  textoAccion.textContent = "Escuchando…";
+  textoEstado.textContent = "";
+
+  pantallaCalibracion.classList.add("hidden");
+  pantallaJuego.classList.remove("hidden");
+
+  fase = "escuchando";
+  activo = true;
+  nivelSuave = null;
+  ultimoRuido = performance.now();
+  ultimoAviso = performance.now();
+
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(actualizarMedidor);
+}
+
+function terminarJuego() {
+  activo = false;
+  calibrado = false;
+  cancelAnimationFrame(rafId);
+
+  if (resguardoVoz) {
+    clearTimeout(resguardoVoz);
+    resguardoVoz = null;
+  }
+  hablando = false;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
+  }
+  analyser = null;
+
+  pantallaJuego.classList.add("hidden");
+  pantallaCalibracion.classList.remove("hidden");
+  btnIniciar.disabled = false;
+  btnIniciar.textContent = "Iniciar calibración";
+  textoCalibracion.textContent = "Mantén silencio normal en la habitación";
+  nivelBase.style.width = "0%";
+  mostrarPermisoMsg("Al iniciar, el navegador te pedirá permiso para usar el micrófono. Toca <strong>Permitir</strong>.", true);
+}
+
+// ===== Eventos =====
+botonesModo.forEach(boton => {
+  boton.addEventListener("click", () => {
+    modo = boton.dataset.modo;
+    botonesModo.forEach(b => {
+      const activoBoton = (b === boton);
+      b.classList.toggle("activo", activoBoton);
+      b.setAttribute("aria-pressed", activoBoton ? "true" : "false");
+    });
+    campoInsistir.classList.toggle("hidden", modo !== "supervision");
+  });
+});
+
+sliderSilencio.addEventListener("input", () => {
+  valorSilencio.textContent = sliderSilencio.value;
+});
+
+sliderInsistir.addEventListener("input", () => {
+  valorInsistir.textContent = sliderInsistir.value;
+});
+
+sliderObjetivo.addEventListener("input", () => {
+  const valor = parseInt(sliderObjetivo.value, 10);
+  objetivo = Math.max(valor, Math.round(umbralRuido));
+  sliderObjetivo.value = objetivo;
+  valorObjetivo.textContent = objetivo;
+});
+
+btnTerminar.addEventListener("click", terminarJuego);
+
+btnIniciar.addEventListener("click", async () => {
+  btnIniciar.disabled = true;
+  btnIniciar.textContent = "Preparando...";
+
+  try {
+    datos = await cargarTextos();
+  } catch (e) {
+    mostrarPermisoMsg("<strong>No se pudo cargar " + ARCHIVO_TEXTOS + ".</strong><br>" + (e.message || ""), false);
+    btnIniciar.disabled = false;
+    btnIniciar.textContent = "Reintentar";
+    return;
+  }
+
+  try {
+    await iniciarAudio();
+  } catch (err) {
+    mostrarPermisoMsg(mensajeError(err), false);
+    btnIniciar.disabled = false;
+    btnIniciar.textContent = "Reintentar";
+    return;
+  }
+
+  segSilencio = parseInt(sliderSilencio.value, 10) || 10;
+  segInsistir = parseInt(sliderInsistir.value, 10) || 10;
+
+  btnIniciar.textContent = "Calibrando... (mantén silencio)";
+  textoCalibracion.textContent = "Calibrando ruido ambiente...";
+
+  const inicioCalibracion = performance.now();
+  const muestras = [];
+
+  const calibrar = () => {
+    const rms = obtenerRMS();
+    muestras.push(rms);
+
+    const promedioActual = muestras.reduce((a, b) => a + b, 0) / muestras.length;
+    nivelBase.style.width = Math.min(Math.max((promedioActual / 60) * 100, 0), 100) + "%";
+
+    if (performance.now() - inicioCalibracion < 3000) {
+      requestAnimationFrame(calibrar);
+      return;
+    }
+
+    const ordenadas = [...muestras].sort((a, b) => a - b);
+    noiseBase = ordenadas[Math.floor(ordenadas.length / 2)];
+    calibrado = true;
+
+    const ambiente = Math.round(rmsANivel(noiseBase));
+    umbralRuido = clamp(ambiente + 10, 8, 90);
+    objetivo = clamp(ambiente + 30, 20, 95);
+    sliderObjetivo.min = Math.round(umbralRuido);
+    sliderObjetivo.value = objetivo;
+    valorObjetivo.textContent = objetivo;
+
+    iniciarJuego();
+  };
+
+  calibrar();
+});
+
+// Informar si el permiso ya está bloqueado
+if (navigator.permissions && navigator.permissions.query) {
+  navigator.permissions.query({ name: "microphone" }).then(r => {
+    const revisar = () => {
+      if (r.state === "denied") mostrarPermisoMsg(mensajeError({ name: "NotAllowedError" }), false);
+    };
+    revisar();
+    r.onchange = revisar;
+  }).catch(() => {});
+}
+</script>
+
+<script src="../js/volver.js" data-padre="../Juegos.html"></script>
+</body>
+</html>
