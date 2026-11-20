@@ -4,14 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Juego del Micrófono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #120e1c;
+    --bg-2: #1a1428;
+    --card: #201933;
+    --card-border: #322a4a;
+    --fg: #f4f1fb;
+    --fg-muted: #a599c7;
+    --coral: #ff6a5c;
+    --teal: #2fd9c7;
+    --coral-glow: rgba(255, 106, 92, .35);
+    --teal-glow: rgba(47, 217, 199, .35);
+  }
+
   body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0f172a;
-    color: #f8fafc;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--fg);
+    background:
+      radial-gradient(circle at 15% 0%, var(--bg-2), transparent 55%),
+      radial-gradient(circle at 100% 30%, #1c1330, transparent 45%),
+      var(--bg);
     min-height: 100dvh;
-    padding: 16px;
+    padding: max(28px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -20,111 +40,175 @@
     width: 100%;
     max-width: 420px;
     margin: auto;
-    background: #1e293b;
-    border-radius: 24px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
     padding: 24px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .7);
   }
-  h1 { font-size: 1.1rem; margin-bottom: 16px; text-align: center; color: #94a3b8; }
+  h1 {
+    font-family: 'Chakra Petch', sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    margin: 0 0 18px;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
   .hidden { display: none !important; }
 
   /* Configuración y calibración */
   .calibrando { text-align: center; }
-  .calibrando p { margin-bottom: 12px; color: #cbd5e1; font-size: .9rem; }
+  .calibrando p { margin-bottom: 12px; color: var(--fg-muted); font-size: .9rem; }
 
   .modos {
-    display: flex; margin-bottom: 18px;
-    background: #0f172a; border: 1px solid #334155; border-radius: 12px;
+    display: flex; margin-bottom: 20px;
+    background: var(--bg-2);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
     overflow: hidden;
   }
   .modo {
     flex: 1; padding: 12px 8px; border: none; cursor: pointer;
-    background: transparent; color: #94a3b8;
-    font-family: inherit; font-weight: 700; font-size: .9rem;
+    background: transparent; color: var(--fg-muted);
+    font-family: 'Chakra Petch', sans-serif; font-weight: 600; font-size: .92rem;
   }
-  .modo.activo { background: #38bdf8; color: #0f172a; }
+  .modo.activo {
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+  }
 
   .campo { margin-bottom: 16px; text-align: left; }
   .campo label {
     display: flex; justify-content: space-between;
-    font-size: .85rem; color: #94a3b8; margin-bottom: 6px;
+    font-size: .85rem; color: var(--fg-muted); margin-bottom: 6px;
   }
-  .campo label span { color: #f8fafc; font-weight: 700; }
-  .campo input[type=range] { width: 100%; accent-color: #38bdf8; }
+  .campo label span { color: var(--teal); font-weight: 700; }
+  .campo input[type=range] { width: 100%; accent-color: var(--teal); }
 
   .barra-base {
-    width: 100%; height: 10px; background: #334155; border-radius: 6px; overflow: hidden; margin-bottom: 16px;
+    width: 100%; height: 10px; background: var(--bg-2);
+    border: 1px solid var(--card-border);
+    border-radius: 6px; overflow: hidden; margin-bottom: 16px;
   }
   .nivel-base {
-    height: 100%; width: 0%; background: #38bdf8; transition: width 0.1s;
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    transition: width 0.1s;
   }
   .btn-calibrar {
-    width: 100%; padding: 16px; border: none; border-radius: 12px;
-    background: #38bdf8; color: #000; font-weight: 700; font-size: 1rem; cursor: pointer;
+    width: 100%; padding: 16px; border: none; border-radius: 14px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    color: var(--bg);
+    font-family: 'Chakra Petch', sans-serif;
+    font-weight: 700; font-size: 1rem; letter-spacing: .05em;
+    cursor: pointer;
+    box-shadow: 0 10px 30px -12px var(--coral-glow);
   }
-  .btn-calibrar:active { opacity: 0.9; }
+  .btn-calibrar:active { transform: scale(.98); }
 
   /* Juego */
   .chip {
     display: block; width: fit-content; margin: 0 auto 12px;
     padding: 4px 14px; border-radius: 999px;
-    background: #0f172a; border: 1px solid #334155;
-    color: #38bdf8; font-size: .7rem; font-weight: 700;
+    background: rgba(47, 217, 199, .12);
+    border: 1px solid rgba(47, 217, 199, .35);
+    color: var(--teal);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: .7rem; font-weight: 700;
     letter-spacing: .08em; text-transform: uppercase;
   }
   .accion {
-    font-size: 1.6rem; font-weight: 800; text-align: center; line-height: 1.2;
-    margin: 6px 0; color: #fbbf24; min-height: 110px;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 1.5rem; font-weight: 700; text-align: center; line-height: 1.25;
+    margin: 6px 0; color: var(--fg); min-height: 110px;
     display: flex; align-items: center; justify-content: center;
   }
-  .estado { text-align: center; color: #94a3b8; font-size: .9rem; min-height: 22px; margin-bottom: 6px; }
+  .estado { text-align: center; color: var(--fg-muted); font-size: .9rem; min-height: 22px; margin-bottom: 6px; }
 
   .medidor-container {
-    position: relative; height: 120px; margin: 14px 0 18px; border: 1px solid #334155;
-    border-radius: 12px; background: #0f172a; overflow: hidden;
+    position: relative; height: 120px; margin: 14px 0 18px;
+    border: 1px solid var(--card-border);
+    border-radius: 14px; background: var(--bg); overflow: hidden;
   }
   .medidor-barras {
     display: flex; align-items: flex-end; height: 100%; width: 100%; gap: 4px; padding: 4px;
   }
   .barra {
-    flex: 1; background: #22d3ee; border-radius: 2px 2px 0 0;
+    flex: 1; background: var(--teal); border-radius: 2px 2px 0 0;
     transition: height 0.12s linear, background 0.2s linear;
   }
-  .umbral-linea {
-    position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #ef4444;
-    transform: translateY(-50%); pointer-events: none; z-index: 2;
+  .linea-nivel {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: var(--coral);
+    transform: translateY(-50%);
+    pointer-events: none; z-index: 2;
   }
-  .umbral-label {
-    position: absolute; left: 6px; top: 2px; transform: translateY(-100%);
-    font-size: 0.75rem; color: #ef4444; background: #0f172a; padding: 0 4px; border-radius: 4px;
+  .linea-nivel.tenue {
+    height: 0;
+    background: transparent;
+    border-top: 2px dashed rgba(255, 106, 92, .55);
   }
+  .linea-nivel span {
+    position: absolute; right: 6px; top: 0;
+    transform: translateY(-50%);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: .62rem; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--coral); background: var(--bg);
+    padding: 1px 5px; border-radius: 4px;
+    white-space: nowrap;
+  }
+  .linea-nivel.tenue span { left: 6px; right: auto; opacity: .8; }
 
-  .nivel-live { font-size: 0.85rem; color: #94a3b8; text-align: center; margin-top: 8px; }
-  .nivel-live strong { color: #f8fafc; }
+  .nivel-live { font-size: 0.85rem; color: var(--fg-muted); text-align: center; margin-top: 8px; }
+  .nivel-live strong { color: var(--fg); }
 
   .umbral-control {
-    margin: 12px 0; padding: 12px; background: #334155; border-radius: 12px;
+    margin: 12px 0; padding: 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
     display: flex; flex-direction: column; gap: 8px;
   }
-  .umbral-control label { font-size: 0.85rem; color: #94a3b8; display: flex; justify-content: space-between; }
-  .umbral-control input[type=range] { width: 100%; accent-color: #38bdf8; }
+  .umbral-control label { font-size: 0.85rem; color: var(--fg-muted); display: flex; justify-content: space-between; }
+  .umbral-control label span { color: var(--teal); font-weight: 700; }
+  .umbral-control input[type=range] { width: 100%; accent-color: var(--teal); }
 
   .btn-accion {
-    width: 100%; padding: 14px; border: none; border-radius: 12px;
-    background: #3b82f6; color: #fff; font-family: inherit;
-    font-size: 1rem; font-weight: 700; cursor: pointer;
+    width: 100%; padding: 15px; border: none; border-radius: 14px;
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    color: var(--bg);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 1rem; font-weight: 700; letter-spacing: .05em;
+    cursor: pointer;
   }
-  .btn-accion.secundaria { background: #475569; margin-top: 12px; }
-  .btn-accion:active { opacity: 0.9; }
+  .btn-accion.secundaria {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--card-border);
+    margin-top: 12px;
+  }
+  .btn-accion:active { transform: scale(.98); }
 
   .permiso-msg {
     display: none; margin-bottom: 14px; padding: 12px; border-radius: 12px; font-size: 0.85rem;
-    line-height: 1.4; text-align: left; background: #7f1d1d; color: #fecaca;
+    line-height: 1.4; text-align: left;
+    background: rgba(255, 106, 92, .14);
+    border: 1px solid rgba(255, 106, 92, .4);
+    color: #ffd8d3;
   }
   .permiso-msg.visible { display: block; }
-  .permiso-msg.info { background: #334155; color: #cbd5e1; }
+  .permiso-msg.info {
+    background: var(--bg-2);
+    border-color: var(--card-border);
+    color: var(--fg-muted);
+  }
 
-  .aviso { font-size: 0.72rem; color: #64748b; text-align: center; margin-top: 16px; line-height: 1.4; }
+  .aviso { font-size: 0.72rem; color: #6f6591; text-align: center; margin-top: 16px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -170,8 +254,13 @@
 
     <div class="medidor-container">
       <div class="medidor-barras" id="medidor-barras"></div>
-      <div class="umbral-linea" id="umbral-linea"></div>
-      <div class="umbral-label" id="umbral-label">Ruido</div>
+      <div class="linea-nivel tenue" id="linea-ruido"><span id="etiqueta-ruido">Ruido</span></div>
+      <div class="linea-nivel" id="linea-objetivo"><span id="etiqueta-objetivo">Nivel</span></div>
+    </div>
+
+    <div class="umbral-control" id="control-ruido">
+      <label>Nivel de ruido <span id="valor-ruido">40</span></label>
+      <input type="range" id="slider-ruido" min="1" max="100" step="1" value="40">
     </div>
 
     <div class="umbral-control hidden" id="control-objetivo">
@@ -179,7 +268,7 @@
       <input type="range" id="slider-objetivo" min="10" max="100" step="1" value="60">
     </div>
 
-    <div class="nivel-live">Nivel: <strong id="nivel-actual">0%</strong> · <span id="etiqueta-linea">Ruido</span>: <strong id="nivel-limite">0%</strong></div>
+    <div class="nivel-live">Nivel actual: <strong id="nivel-actual">0%</strong></div>
 
     <button class="btn-accion secundaria" id="btn-terminar">Terminar</button>
   </section>
@@ -239,16 +328,20 @@ const textoAccion = document.getElementById("texto-accion");
 const textoEstado = document.getElementById("texto-estado");
 
 const medidorBarras = document.getElementById("medidor-barras");
-const umbralLinea = document.getElementById("umbral-linea");
-const umbralLabel = document.getElementById("umbral-label");
+const lineaRuido = document.getElementById("linea-ruido");
+const lineaObjetivo = document.getElementById("linea-objetivo");
+const etiquetaRuido = document.getElementById("etiqueta-ruido");
+const etiquetaObjetivo = document.getElementById("etiqueta-objetivo");
+
+const controlRuido = document.getElementById("control-ruido");
+const sliderRuido = document.getElementById("slider-ruido");
+const valorRuido = document.getElementById("valor-ruido");
 
 const controlObjetivo = document.getElementById("control-objetivo");
 const sliderObjetivo = document.getElementById("slider-objetivo");
 const valorObjetivo = document.getElementById("valor-objetivo");
 
 const nivelActualEl = document.getElementById("nivel-actual");
-const nivelLimiteEl = document.getElementById("nivel-limite");
-const etiquetaLinea = document.getElementById("etiqueta-linea");
 
 const btnTerminar = document.getElementById("btn-terminar");
 
@@ -343,13 +436,39 @@ function rmsANivel(rms) {
 }
 
 // ===== Voz =====
+function esVozFemenina(voz) {
+  const n = String(voz.name || "").toLowerCase();
+  if (/female|femenina|mujer|woman/.test(n)) return true;
+  const nombres = ["paulina", "monica", "mónica", "marisol", "sabina", "helena", "laura", "maria", "maría", "carmen", "lucia", "lucía", "elvira", "penelope", "penélope", "esperanza", "ximena", "valeria", "dalia", "camila", "gabriela", "isabela", "sofia", "sofía", "lupe", "guadalupe", "angela", "ángela", "irene", "soledad", "conchita", "teresa", "juana", "veronica", "verónica", "alejandra", "fernanda", "renata", "julia", "julieta", "diana", "claudia", "patricia", "silvia", "rocio", "rocío", "lorena", "miriam", "nuria"];
+  return nombres.some(nombre => n.includes(nombre));
+}
+
 function vozEnEspanol() {
   if (!("speechSynthesis" in window)) return null;
-  return speechSynthesis.getVoices().find(voz => String(voz.lang).toLowerCase().startsWith("es")) || null;
+  const voces = speechSynthesis.getVoices();
+  const normal = voz => String(voz.lang || "").toLowerCase().replace("_", "-");
+  const paises = ["es-mx", "es-us", "es-419"];
+
+  for (const pref of paises) {
+    const voz = voces.find(v => normal(v).startsWith(pref) && esVozFemenina(v));
+    if (voz) return voz;
+  }
+  const femenina = voces.find(voz => normal(voz).startsWith("es") && esVozFemenina(voz));
+  if (femenina) return femenina;
+
+  for (const pref of paises) {
+    const voz = voces.find(v => normal(v).startsWith(pref));
+    if (voz) return voz;
+  }
+  return voces.find(voz => normal(voz).startsWith("es")) || null;
 }
 
 function decir(texto, alTerminar) {
   if (!texto) {
+    if (alTerminar) alTerminar();
+    return;
+  }
+  if (window.Sonido && !window.Sonido.activo()) {
     if (alTerminar) alTerminar();
     return;
   }
@@ -380,7 +499,7 @@ function decir(texto, alTerminar) {
       frase.voice = voz;
       frase.lang = voz.lang;
     } else {
-      frase.lang = "es-ES";
+      frase.lang = "es-MX";
     }
     frase.rate = 1;
     frase.onend = fin;
@@ -458,12 +577,11 @@ function actualizarMedidor() {
   barras.forEach((b, i) => {
     const h = Math.min(nivel * pesosBarras[i], 100);
     b.style.height = h + "%";
-    b.style.background = h > objetivo && modo === "supervision" ? "#f87171" : "#22d3ee";
+    b.style.background = h > objetivo && modo === "supervision" ? "#ff6a5c" : "#2fd9c7";
   });
 
-  const linea = modo === "supervision" ? objetivo : umbralRuido;
-  umbralLinea.style.top = (100 - clamp(linea, 0, 100)) + "%";
-  nivelLimiteEl.textContent = Math.round(linea) + "%";
+  lineaRuido.style.top = (100 - clamp(umbralRuido, 0, 100)) + "%";
+  lineaObjetivo.style.top = (100 - clamp(objetivo, 0, 100)) + "%";
 
   if (nivel >= umbralRuido) ultimoRuido = ahora;
 
@@ -531,9 +649,9 @@ function anunciarActividad() {
 
 function iniciarJuego() {
   chipModo.textContent = modo === "supervision" ? "Supervisión" : "Solo escucha";
-  controlObjetivo.classList.toggle("hidden", modo !== "supervision");
-  etiquetaLinea.textContent = modo === "supervision" ? "Nivel" : "Ruido";
-  umbralLabel.textContent = modo === "supervision" ? "Nivel" : "Ruido";
+  const esSupervision = modo === "supervision";
+  controlObjetivo.classList.toggle("hidden", !esSupervision);
+  lineaObjetivo.classList.toggle("hidden", !esSupervision);
 
   textoAccion.textContent = "Escuchando…";
   textoEstado.textContent = "";
@@ -603,11 +721,28 @@ sliderInsistir.addEventListener("input", () => {
   valorInsistir.textContent = sliderInsistir.value;
 });
 
-sliderObjetivo.addEventListener("input", () => {
-  const valor = parseInt(sliderObjetivo.value, 10);
-  objetivo = Math.max(valor, Math.round(umbralRuido));
+function fijarObjetivo(valor, minimo) {
+  objetivo = clamp(valor, minimo, 100);
   sliderObjetivo.value = objetivo;
   valorObjetivo.textContent = objetivo;
+  etiquetaObjetivo.textContent = "Nivel " + objetivo + "%";
+}
+
+sliderRuido.addEventListener("input", () => {
+  umbralRuido = clamp(parseInt(sliderRuido.value, 10), 1, 100);
+  valorRuido.textContent = umbralRuido;
+  etiquetaRuido.textContent = "Ruido " + umbralRuido + "%";
+
+  const minimoObjetivo = Math.min(100, umbralRuido + 2);
+  sliderObjetivo.min = minimoObjetivo;
+  if (objetivo < minimoObjetivo) {
+    fijarObjetivo(minimoObjetivo, minimoObjetivo);
+  }
+});
+
+sliderObjetivo.addEventListener("input", () => {
+  const minimo = Math.min(100, umbralRuido + 2);
+  fijarObjetivo(parseInt(sliderObjetivo.value, 10), minimo);
 });
 
 btnTerminar.addEventListener("click", terminarJuego);
@@ -660,11 +795,17 @@ btnIniciar.addEventListener("click", async () => {
     calibrado = true;
 
     const ambiente = Math.round(rmsANivel(noiseBase));
-    umbralRuido = clamp(ambiente + 10, 8, 90);
-    objetivo = clamp(ambiente + 30, 20, 95);
-    sliderObjetivo.min = Math.round(umbralRuido);
-    sliderObjetivo.value = objetivo;
-    valorObjetivo.textContent = objetivo;
+    umbralRuido = clamp(ambiente + 10, 5, 90);
+    objetivo = clamp(ambiente + 30, Math.min(100, Math.round(umbralRuido) + 5), 95);
+
+    sliderRuido.value = Math.round(umbralRuido);
+    valorRuido.textContent = Math.round(umbralRuido);
+    etiquetaRuido.textContent = "Ruido " + Math.round(umbralRuido) + "%";
+
+    sliderObjetivo.min = Math.min(100, Math.round(umbralRuido) + 2);
+    sliderObjetivo.value = Math.round(objetivo);
+    valorObjetivo.textContent = Math.round(objetivo);
+    etiquetaObjetivo.textContent = "Nivel " + Math.round(objetivo) + "%";
 
     iniciarJuego();
   };
@@ -685,5 +826,6 @@ if (navigator.permissions && navigator.permissions.query) {
 </script>
 
 <script src="../js/volver.js" data-padre="../Juegos.html"></script>
+<script src="../js/sonido.js"></script>
 </body>
 </html>

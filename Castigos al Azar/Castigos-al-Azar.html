@@ -371,16 +371,38 @@ function obtenerTextoAleatorio(){
     return indice;
 }
 //---------------------------------------------
+function esVozFemenina(voz){
+    const n=String(voz.name || "").toLowerCase();
+    if(/female|femenina|mujer|woman/.test(n)) return true;
+    const nombres=["paulina","monica","mónica","marisol","sabina","helena","laura","maria","maría","carmen","lucia","lucía","elvira","penelope","penélope","esperanza","ximena","valeria","dalia","camila","gabriela","isabela","sofia","sofía","lupe","guadalupe","angela","ángela","irene","soledad","conchita","teresa","juana","veronica","verónica","alejandra","fernanda","renata","julia","julieta","diana","claudia","patricia","silvia","rocio","rocío","lorena","miriam","nuria"];
+    return nombres.some(nombre=>n.includes(nombre));
+}
+
 function vozEnEspanol(){
     if(!("speechSynthesis" in window)){
         return null;
     }
     const voces=speechSynthesis.getVoices();
-    return voces.find(voz=>String(voz.lang).toLowerCase().startsWith("es")) || null;
+    const normal=voz=>String(voz.lang || "").toLowerCase().replace("_","-");
+    const paises=["es-mx","es-us","es-419"];
+
+    for(const pref of paises){
+        const voz=voces.find(v=>normal(v).startsWith(pref) && esVozFemenina(v));
+        if(voz) return voz;
+    }
+    const femenina=voces.find(voz=>normal(voz).startsWith("es") && esVozFemenina(voz));
+    if(femenina) return femenina;
+
+    for(const pref of paises){
+        const voz=voces.find(v=>normal(v).startsWith(pref));
+        if(voz) return voz;
+    }
+    return voces.find(voz=>normal(voz).startsWith("es")) || null;
 }
 //---------------------------------------------
 function decir(texto){
     return new Promise(resolve=>{
+        if(window.Sonido && !window.Sonido.activo()){ resolve(); return; }
         if(!("speechSynthesis" in window)){
             setTimeout(resolve,1500);
             return;
@@ -391,7 +413,7 @@ function decir(texto){
             frase.voice=voz;
             frase.lang=voz.lang;
         }else{
-            frase.lang="es-ES";
+            frase.lang="es-MX";
         }
         frase.rate=1;
         frase.onend=resolve;
@@ -495,5 +517,6 @@ btnInicio.addEventListener("click", async ()=>{
 });
 </script>
 <script src="../js/volver.js" data-padre="../Audios.html"></script>
+<script src="../js/sonido.js"></script>
 </body>
 </html>

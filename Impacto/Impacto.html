@@ -457,10 +457,62 @@
     mostrarResultado();
   }
 
+  // ---------- Voz: leer la imposición en voz alta ----------
+  function esVozFemenina(voz){
+    const n = String(voz.name || "").toLowerCase();
+    if(/female|femenina|mujer|woman/.test(n)) return true;
+    const nombres = ["paulina","monica","mónica","marisol","sabina","helena","laura","maria","maría","carmen","lucia","lucía","elvira","penelope","penélope","esperanza","ximena","valeria","dalia","camila","gabriela","isabela","sofia","sofía","lupe","guadalupe","angela","ángela","irene","soledad","conchita","teresa","juana","veronica","verónica","alejandra","fernanda","renata","julia","julieta","diana","claudia","patricia","silvia","rocio","rocío","lorena","miriam","nuria"];
+    return nombres.some(nombre => n.includes(nombre));
+  }
+
+  function vozEnEspanol(){
+    if(!("speechSynthesis" in window)) return null;
+    const voces = speechSynthesis.getVoices();
+    const normal = voz => String(voz.lang || "").toLowerCase().replace("_","-");
+    const paises = ["es-mx","es-us","es-419"];
+
+    for(const pref of paises){
+      const voz = voces.find(v => normal(v).startsWith(pref) && esVozFemenina(v));
+      if(voz) return voz;
+    }
+    const femenina = voces.find(voz => normal(voz).startsWith("es") && esVozFemenina(voz));
+    if(femenina) return femenina;
+
+    for(const pref of paises){
+      const voz = voces.find(v => normal(v).startsWith(pref));
+      if(voz) return voz;
+    }
+    return voces.find(voz => normal(voz).startsWith("es")) || null;
+  }
+
+  function decir(texto){
+    if(!("speechSynthesis" in window)) return;
+    if(window.Sonido && !window.Sonido.activo()) return;
+    try{
+      speechSynthesis.cancel();
+      const frase = new SpeechSynthesisUtterance(texto);
+      const voz = vozEnEspanol();
+      if(voz){
+        frase.voice = voz;
+        frase.lang = voz.lang;
+      }else{
+        frase.lang = "es-MX";
+      }
+      frase.rate = 1;
+      speechSynthesis.speak(frase);
+    }catch(e){}
+  }
+
+  // Despierta la lista de voces del teléfono antes de usarla.
+  if("speechSynthesis" in window){
+    speechSynthesis.getVoices();
+  }
+
   // ---------- Ventana emergente de imposición ----------
   function pedirImposicion(siguiente){
     const elegida = imposiciones[Math.floor(Math.random() * imposiciones.length)];
     modalTextoEl.textContent = elegida;
+    decir(elegida);
     alAceptar = siguiente;
     modalEl.classList.add("visible");
   }
@@ -569,5 +621,6 @@
 })();
 </script>
 <script src="../js/volver.js" data-padre="../Juegos.html"></script>
+<script src="../js/sonido.js"></script>
 </body>
 </html>

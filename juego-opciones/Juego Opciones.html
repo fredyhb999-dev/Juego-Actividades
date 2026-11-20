@@ -422,18 +422,43 @@ function pick(choice){
   nextRound();
 }
 
+function esVozFemenina(v){
+  const n = String(v.name || "").toLowerCase();
+  if(/female|femenina|mujer|woman/.test(n)) return true;
+  const nombres = ["paulina","monica","mónica","marisol","sabina","helena","laura","maria","maría","carmen","lucia","lucía","elvira","penelope","penélope","esperanza","ximena","valeria","dalia","camila","gabriela","isabela","sofia","sofía","lupe","guadalupe","angela","ángela","irene","soledad","conchita","teresa","juana","veronica","verónica","alejandra","fernanda","renata","julia","julieta","diana","claudia","patricia","silvia","rocio","rocío","lorena","miriam","nuria"];
+  return nombres.some(nombre => n.includes(nombre));
+}
+
+function buscarVozEspanol(voces){
+  const normal = v => String(v.lang || "").toLowerCase().replace("_", "-");
+  const paises = ["es-mx", "es-us", "es-419"];
+
+  for(const pref of paises){
+    const v = voces.find(x => normal(x).startsWith(pref) && esVozFemenina(x));
+    if(v) return v;
+  }
+  const femenina = voces.find(x => normal(x).startsWith("es") && esVozFemenina(x));
+  if(femenina) return femenina;
+
+  for(const pref of paises){
+    const v = voces.find(x => normal(x).startsWith(pref));
+    if(v) return v;
+  }
+  return voces.find(x => normal(x).startsWith("es")) || null;
+}
+
 function hablar(texto){
   if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+  if(window.Sonido && !window.Sonido.activo()) return;
   try{
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(texto);
-    u.lang = "es-ES";
+    u.lang = "es-MX";
     u.rate = 1;
     u.pitch = 1;
     u.volume = 1;
-    const voces = speechSynthesis.getVoices();
-    const vEspanol = voces.find(v => v.lang && v.lang.toLowerCase().indexOf("es") === 0);
-    if(vEspanol) u.voice = vEspanol;
+    const voz = buscarVozEspanol(speechSynthesis.getVoices());
+    if(voz){ u.voice = voz; u.lang = voz.lang; }
     speechSynthesis.speak(u);
   }catch(e){}
 }
@@ -513,5 +538,6 @@ cargarRutinasModal();
 </script>
 
 <script src="../js/volver.js" data-padre="../Juegos.html"></script>
+<script src="../js/sonido.js"></script>
 </body>
 </html>
