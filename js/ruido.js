@@ -13,7 +13,7 @@
   let ocupado = false;
   let frases = [];
   let umbral = 40;
-  let espera = 10;
+  let espera = 5;
   let nivelSuave = null;
   let sobreDesde = 0;
   let ultimoDisparo = 0;
@@ -81,15 +81,6 @@
       ".rv-fila{ display:flex; justify-content:space-between; color:var(--fg-muted, #a599c7); margin-bottom:4px; }",
       ".rv-fila strong{ color:var(--teal, #2fd9c7); }",
       ".rv-panel input[type=range]{ width:100%; accent-color:var(--teal, #2fd9c7); margin-bottom:8px; }",
-      ".rv-estado{ font-size:.72rem; color:var(--fg-muted, #a599c7); margin:2px 0 8px; }",
-      ".rv-detener{",
-      "  width:100%; padding:8px;",
-      "  background:transparent; color:var(--fg, #f4f1fb);",
-      "  border:1px solid var(--card-border, #322a4a);",
-      "  border-radius:10px; cursor:pointer;",
-      "  font-family:inherit; font-size:.8rem;",
-      "}",
-      ".rv-detener:active{ transform:scale(.97); }",
       ".rv-aviso{",
       "  position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom));",
       "  transform:translateX(-50%) translateY(8px);",
@@ -126,10 +117,8 @@
     panel.innerHTML =
       '<div class="rv-fila"><span>Nivel</span><strong id="rv-valor-nivel">40%</strong></div>' +
       '<input id="rv-nivel" type="range" min="1" max="100" step="1" value="40">' +
-      '<div class="rv-fila"><span>Espera</span><strong id="rv-valor-espera">10 s</strong></div>' +
-      '<input id="rv-espera" type="range" min="3" max="60" step="1" value="10">' +
-      '<div class="rv-estado" id="rv-estado">Listo</div>' +
-      '<button type="button" id="rv-detener" class="rv-detener">Detener</button>';
+      '<div class="rv-fila"><span>Espera</span><strong id="rv-valor-espera">5 s</strong></div>' +
+      '<input id="rv-espera" type="range" min="3" max="60" step="1" value="5">';
     document.body.appendChild(panel);
 
     const aviso = document.createElement("div");
@@ -141,15 +130,34 @@
     const sliderEspera = document.getElementById("rv-espera");
     const valorNivel = document.getElementById("rv-valor-nivel");
     const valorEspera = document.getElementById("rv-valor-espera");
-    const estado = document.getElementById("rv-estado");
-    const detener = document.getElementById("rv-detener");
 
-    boton.addEventListener("click", () => {
+    let toqueTimer = null;
+
+    function toqueSimple() {
+      if (!activo) {
+        activar();
+        return;
+      }
+      ui.panel.classList.toggle("hidden");
+    }
+
+    function toqueDoble() {
       if (activo) desactivar(true);
       else activar();
-    });
+    }
 
-    detener.addEventListener("click", () => desactivar(true));
+    boton.addEventListener("click", () => {
+      if (toqueTimer) {
+        clearTimeout(toqueTimer);
+        toqueTimer = null;
+        toqueDoble();
+        return;
+      }
+      toqueTimer = setTimeout(() => {
+        toqueTimer = null;
+        toqueSimple();
+      }, 280);
+    });
 
     sliderNivel.addEventListener("input", () => {
       umbral = clamp(parseInt(sliderNivel.value, 10), 1, 100);
@@ -168,8 +176,7 @@
       sliderNivel: sliderNivel,
       sliderEspera: sliderEspera,
       valorNivel: valorNivel,
-      valorEspera: valorEspera,
-      estado: estado
+      valorEspera: valorEspera
     };
   }
 
@@ -332,13 +339,12 @@
     activo = true;
     calibrando = true;
     ui.boton.disabled = false;
-    ui.boton.textContent = "\uD83C\uDF99\uFE0F";
+    ui.boton.textContent = "…";
     ui.boton.classList.add("activo");
     ui.boton.setAttribute("aria-pressed", "true");
     ui.boton.title = "Detener supervisión";
     ui.boton.setAttribute("aria-label", "Detener supervisión");
     ui.panel.classList.remove("hidden");
-    ui.estado.textContent = "Calibrando…";
     nivelSuave = null;
     sobreDesde = 0;
     ultimoDisparo = performance.now();
@@ -363,7 +369,7 @@
       ui.valorNivel.textContent = umbral + "%";
 
       calibrando = false;
-      ui.estado.textContent = "Supervisando";
+      ui.boton.textContent = "\uD83C\uDF99\uFE0F";
       hablar("Supervisando comportamiento", () => {
         silencioHasta = performance.now() + 500;
       });
@@ -393,6 +399,7 @@
     nivelSuave = null;
 
     ui.panel.classList.add("hidden");
+    ui.boton.textContent = "\uD83C\uDF99\uFE0F";
     ui.boton.classList.remove("activo");
     ui.boton.setAttribute("aria-pressed", "false");
     ui.boton.title = "Supervisar comportamiento";
