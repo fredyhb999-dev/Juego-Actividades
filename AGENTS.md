@@ -17,7 +17,8 @@ El `index.html` de la raíz enlaza a **Juegos**, **JuegosGuiados**, **Audios**,
 - La raíz y la carpeta `Juego-Actividades/` **se trabajan las dos**. Aunque el
   nombre se repita, **no son copias**: su contenido es diferente. No asumir que
   una es la versión vieja de la otra.
-- Los scripts compartidos están en `js/` (`volver.js`, `funciones.js`).
+- Los scripts compartidos están en `js/` (`volver.js`, `funciones.js`,
+  `sonido.js`, `voz.js`, `ruido.js`).
 - Las carpetas de audio e imágenes (`Castigos Varios en Audio`,
   `Castigos al Azar`, `Castigos Audio Secuencial`, `Frases Accion`,
   `Impacto`, `Mental`) son contenido. No se renombran, mueven ni editan
