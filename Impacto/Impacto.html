@@ -332,6 +332,11 @@
   let imposiciones = [];     // textos escritos por el usuario
   let modo = null;           // "actividad" | "ronda"
   let turno = 0;             // nivel actual en modo "por actividad"
+  let ronda = 0;             // ronda actual (1, 2, 3…)
+  let extrasCargadas = false;
+  let imposicionEspecial = null; // la de id 1: se usa una sola vez
+  let turnoEspecial = 0;     // actividad de la ronda 2 donde cae la especial
+  let transicionRonda = false; // evita que dos toques rápidos salten una ronda
   let alAceptar = null;      // qué hacer cuando se toca "Aceptar"
   let wakeLock = null;
 
@@ -510,7 +515,18 @@
 
   // ---------- Ventana emergente de imposición ----------
   function pedirImposicion(siguiente){
-    const elegida = imposiciones[Math.floor(Math.random() * imposiciones.length)];
+    let elegida;
+    const tocaEspecial = ronda === 2 && turnoEspecial > 0 &&
+                         (turno + 1) === turnoEspecial && imposicionEspecial;
+
+    if(tocaEspecial){
+      elegida = imposicionEspecial;
+      imposicionEspecial = null;
+      turnoEspecial = 0;
+    }else{
+      elegida = imposiciones[Math.floor(Math.random() * imposiciones.length)];
+    }
+
     modalTextoEl.textContent = elegida;
     decir(elegida);
     alAceptar = siguiente;
@@ -524,6 +540,34 @@
     if(siguiente) siguiente();
   });
 
+  // ---------- Imposiciones extra desde Imposiciones.json ----------
+  async function cargarImposicionesExtra(){
+    if(extrasCargadas) return;
+    extrasCargadas = true;
+
+    try{
+      const res = await fetch("Imposiciones.json", { cache: "no-store" });
+      if(!res.ok) return;
+
+      const datos = await res.json();
+      if(!Array.isArray(datos)) return;
+
+      datos.forEach(item=>{
+        const id = Number(item && item.id);
+        const texto = item && typeof item.descripcion === "string" ? item.descripcion.trim() : "";
+        if(!texto) return;
+
+        if(id === 1){
+          if(!imposicionEspecial) imposicionEspecial = texto;
+        }else if(imposiciones.indexOf(texto) === -1){
+          imposiciones.push(texto);
+        }
+      });
+    }catch(e){
+      // Si el archivo no está o está mal escrito, la partida sigue normal.
+    }
+  }
+
   // ---------- Flujo por actividad: una tarjeta por nivel ----------
   function agregarActividad(){
     turno++;
@@ -531,16 +575,33 @@
     btnSiguiente.textContent = turno < ARCHIVOS.length ? "Continuar" : "Siguiente";
   }
 
-  function empezarRondaActividad(){
-    turno = 0;
-    listaEl.innerHTML = "";
-    btnSiguiente.textContent = "Continuar";
-    mostrarResultado();
-    pedirImposicion(agregarActividad);
+  async function empezarRondaActividad(){
+    if(transicionRonda) return;
+    transicionRonda = true;
+
+    try{
+      ronda++;
+      if(ronda === 2){
+        await cargarImposicionesExtra();
+        if(imposicionEspecial){
+          // Se sortea en cuál de las actividades de esta ronda aparece.
+          turnoEspecial = 1 + Math.floor(Math.random() * ARCHIVOS.length);
+        }
+      }
+
+      turno = 0;
+      listaEl.innerHTML = "";
+      btnSiguiente.textContent = "Continuar";
+      mostrarResultado();
+      pedirImposicion(agregarActividad);
+    }finally{
+      transicionRonda = false;
+    }
   }
 
   // ---------- Flujo por ronda: las 5 tarjetas de golpe ----------
   function empezarRondaCompleta(){
+    ronda++;
     listaEl.innerHTML = "";
     mostrarResultado();
     pedirImposicion(generarRutinaCompleta);
@@ -576,6 +637,11 @@
     imposiciones = leerImposiciones();
     guardarImposiciones(imposiciones);
     ultimaPorNivel = {};
+    ronda = 0;
+    extrasCargadas = false;
+    imposicionEspecial = null;
+    turnoEspecial = 0;
+    transicionRonda = false;
     modo = imposiciones.length > 0 ? modoElegido : null;
 
     if(modo === "actividad"){
