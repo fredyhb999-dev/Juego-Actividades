@@ -335,7 +335,8 @@
   let ronda = 0;             // ronda actual (1, 2, 3…)
   let extrasCargadas = false;
   let imposicionEspecial = null; // la de id 1: se usa una sola vez
-  let turnoEspecial = 0;     // actividad de la ronda 2 donde cae la especial
+  let turnoEspecial = 0;     // actividad de la ronda 3 donde cae la especial
+  let ultimaImposicion = null; // la última que salió, para no repetirla seguida
   let transicionRonda = false; // evita que dos toques rápidos salten una ronda
   let alAceptar = null;      // qué hacer cuando se toca "Aceptar"
   let wakeLock = null;
@@ -514,9 +515,19 @@
   }
 
   // ---------- Ventana emergente de imposición ----------
+  function sortearImposicion(){
+    const total = imposiciones.length;
+    if(total === 0) return "";
+    if(total === 1) return imposiciones[0];
+
+    const otras = imposiciones.filter(texto => texto !== ultimaImposicion);
+    const pool = otras.length > 0 ? otras : imposiciones;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function pedirImposicion(siguiente){
     let elegida;
-    const tocaEspecial = ronda === 2 && turnoEspecial > 0 &&
+    const tocaEspecial = ronda === 3 && turnoEspecial > 0 &&
                          (turno + 1) === turnoEspecial && imposicionEspecial;
 
     if(tocaEspecial){
@@ -524,9 +535,10 @@
       imposicionEspecial = null;
       turnoEspecial = 0;
     }else{
-      elegida = imposiciones[Math.floor(Math.random() * imposiciones.length)];
+      elegida = sortearImposicion();
     }
 
+    ultimaImposicion = elegida;
     modalTextoEl.textContent = elegida;
     decir(elegida);
     alAceptar = siguiente;
@@ -581,7 +593,7 @@
 
     try{
       ronda++;
-      if(ronda === 2){
+      if(ronda === 3){
         await cargarImposicionesExtra();
         if(imposicionEspecial){
           // Se sortea en cuál de las actividades de esta ronda aparece.
@@ -641,6 +653,7 @@
     extrasCargadas = false;
     imposicionEspecial = null;
     turnoEspecial = 0;
+    ultimaImposicion = null;
     transicionRonda = false;
     modo = imposiciones.length > 0 ? modoElegido : null;
 

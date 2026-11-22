@@ -194,7 +194,7 @@
   </div>
 
   <div class="campo">
-    <label for="proporcion">Audios de Avanzado por cada Experto</label>
+    <label for="proporcion">Castigos Inferiores por cada Experto</label>
     <input id="proporcion" type="number" min="1" step="1" value="2" inputmode="numeric">
   </div>
 
@@ -226,9 +226,9 @@
 const USUARIO = "fredyhb999-dev";
 const REPO    = "Juego-Actividades";
 const CARPETA = "Castigos Varios en Audio";
-const SUBCARPETA_0 = "Principiante"; // se reproduce completa una sola vez, al inicio
-const SUBCARPETA_1 = "Avanzado"; // se reproduce primero en cada vuelta
-const SUBCARPETA_2 = "Experto";  // se reproduce al final de cada vuelta
+const SUBCARPETA_0 = "Principiante"; // se baraja aparte
+const SUBCARPETA_1 = "Avanzado";     // se baraja aparte
+const SUBCARPETA_2 = "Experto";      // va uno al final de cada vuelta
 //==============================
 
 const configEl=document.getElementById("config");
@@ -248,15 +248,18 @@ const btnSiguiente=document.getElementById("siguiente");
 
 const CLAVE_CFG="audio_c4minutos_cfg";
 
+let listaPrincipiante=[];
 let listaAvanzado=[];
 let listaExperto=[];
-let colaPrincipiante=[]; // se reproduce completa, en orden, una sola vez al inicio
+let barajaPrincipiante=[];
 let barajaAvanzado=[];
 let barajaExperto=[];
+let ultimoPrincipiante=null;
 let ultimoAvanzado=null;
 let ultimoExperto=null;
-let proporcion=2; // audios de Avanzado por cada 1 de Experto
-let pasoCiclo=0;   // cuántos "Avanzado" van reproducidos desde el último "Experto"
+let proporcion=2;   // castigos inferiores por cada experto
+let cicloFases=[];  // orden de la vuelta: P, P, A, A, E…
+let indiceCiclo=0;
 let minutosEspera=4;
 let temaActual="";
 let temaGuardado="";
@@ -274,6 +277,11 @@ const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 function esAudio(nombreArchivo){
     const n=nombreArchivo.toLowerCase();
     return extensionesAudio.some(ext=>n.endsWith(ext));
+}
+
+// Los que empiezan con "1vez" (sin importar mayúsculas ni espacio) solo suenan una vez por partida.
+function esUnaVez(nombreArchivo){
+    return /^1\s*vez\b/i.test(nombreArchivo);
 }
 
 function nombreVisible(n){
@@ -396,12 +404,31 @@ async function listarAudiosDe(ruta){
 
 async function cargarAudios(tema){
     const raiz=CARPETA+"/"+tema;
-    const listaPrincipiante=await listarAudiosDe(raiz+"/"+SUBCARPETA_0);
-    listaPrincipiante.sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
-    colaPrincipiante=listaPrincipiante;
 
-    listaAvanzado=await listarAudiosDe(raiz+"/"+SUBCARPETA_1);
-    listaExperto=await listarAudiosDe(raiz+"/"+SUBCARPETA_2);
+    listaPrincipiante=(await listarAudiosDe(raiz+"/"+SUBCARPETA_0))
+        .map(item=>Object.assign({},item,{categoria:"Principiante",unaVez:esUnaVez(item.nombre)}));
+
+    listaAvanzado=(await listarAudiosDe(raiz+"/"+SUBCARPETA_1))
+        .map(item=>Object.assign({},item,{categoria:"Avanzado",unaVez:esUnaVez(item.nombre)}));
+
+    listaExperto=(await listarAudiosDe(raiz+"/"+SUBCARPETA_2))
+        .map(item=>Object.assign({},item,{categoria:"Experto",unaVez:esUnaVez(item.nombre)}));
+}
+
+function construirCiclo(){
+    cicloFases=[];
+
+    if(listaPrincipiante.length>0){
+        for(let i=0;i<proporcion;i++) cicloFases.push("principiante");
+    }
+    if(listaAvanzado.length>0){
+        for(let i=0;i<proporcion;i++) cicloFases.push("avanzado");
+    }
+    if(listaExperto.length>0){
+        cicloFases.push("experto");
+    }
+
+    indiceCiclo=0;
 }
 
 //---------------------------------------------
@@ -414,7 +441,26 @@ function mezclar(arr){
     return copia;
 }
 
+function quitarUnaVez(item, lista){
+    if(!item.unaVez) return;
+    const i=lista.findIndex(a=>a.url===item.url);
+    if(i>=0) lista.splice(i,1);
+}
+
 function sacarDeBaraja(categoria){
+
+    if(categoria==="principiante"){
+        if(barajaPrincipiante.length===0){
+            barajaPrincipiante=mezclar(listaPrincipiante);
+            if(barajaPrincipiante.length>1 && barajaPrincipiante[0].url===ultimoPrincipiante){
+                [barajaPrincipiante[0],barajaPrincipiante[1]]=[barajaPrincipiante[1],barajaPrincipiante[0]];
+            }
+        }
+        const item=barajaPrincipiante.shift();
+        ultimoPrincipiante=item.url;
+        quitarUnaVez(item, listaPrincipiante);
+        return item;
+    }
 
     if(categoria==="avanzado"){
         if(barajaAvanzado.length===0){
@@ -425,52 +471,41 @@ function sacarDeBaraja(categoria){
         }
         const item=barajaAvanzado.shift();
         ultimoAvanzado=item.url;
-        return item;
-    }else{
-        if(barajaExperto.length===0){
-            barajaExperto=mezclar(listaExperto);
-            if(barajaExperto.length>1 && barajaExperto[0].url===ultimoExperto){
-                [barajaExperto[0],barajaExperto[1]]=[barajaExperto[1],barajaExperto[0]];
-            }
-        }
-        const item=barajaExperto.shift();
-        ultimoExperto=item.url;
+        quitarUnaVez(item, listaAvanzado);
         return item;
     }
 
+    if(barajaExperto.length===0){
+        barajaExperto=mezclar(listaExperto);
+        if(barajaExperto.length>1 && barajaExperto[0].url===ultimoExperto){
+            [barajaExperto[0],barajaExperto[1]]=[barajaExperto[1],barajaExperto[0]];
+        }
+    }
+    const item=barajaExperto.shift();
+    ultimoExperto=item.url;
+    quitarUnaVez(item, listaExperto);
+    return item;
+}
+
+function categoriaDisponible(categoria){
+    if(categoria==="principiante") return listaPrincipiante.length>0;
+    if(categoria==="avanzado") return listaAvanzado.length>0;
+    return listaExperto.length>0;
 }
 
 function siguienteAudio(){
+    if(cicloFases.length===0) return null;
 
-    if(colaPrincipiante.length>0){
-        const item=colaPrincipiante.shift();
-        return Object.assign({},item,{categoria:"Principiante"});
-    }
+    for(let i=0;i<cicloFases.length;i++){
+        const categoria=cicloFases[indiceCiclo];
+        indiceCiclo=(indiceCiclo+1)%cicloFases.length;
 
-    const hayAvanzado=listaAvanzado.length>0;
-    const hayExperto=listaExperto.length>0;
-
-    let categoria;
-
-    if(hayAvanzado && hayExperto){
-        if(pasoCiclo<proporcion){
-            categoria="avanzado";
-            pasoCiclo++;
-        }else{
-            categoria="experto";
-            pasoCiclo=0;
+        if(categoriaDisponible(categoria)){
+            return sacarDeBaraja(categoria);
         }
-    }else if(hayAvanzado){
-        categoria="avanzado";
-    }else{
-        categoria="experto";
     }
 
-    const item=sacarDeBaraja(categoria);
-    return Object.assign({},item,{
-        categoria: categoria==="avanzado" ? "Avanzado" : "Experto"
-    });
-
+    return null;
 }
 
 //---------------------------------------------
@@ -671,7 +706,7 @@ btnIniciar.onclick=async()=>{
     }
 
     if(!proporcionValor || proporcionValor<1){
-        configMsg.textContent="Escribe un número válido de audios de Avanzado por Experto.";
+        configMsg.textContent="Escribe un número válido de castigos inferiores por cada experto.";
         return;
     }
 
@@ -690,15 +725,19 @@ btnIniciar.onclick=async()=>{
         return;
     }
 
-    if(colaPrincipiante.length===0 && listaAvanzado.length===0 && listaExperto.length===0){
+    if(listaPrincipiante.length===0 && listaAvanzado.length===0 && listaExperto.length===0){
         configMsg.textContent="No se encontraron audios en ese tema.";
         btnIniciar.disabled=false;
         return;
     }
 
+    barajaPrincipiante=[];
+    ultimoPrincipiante=null;
     barajaAvanzado=[];
+    ultimoAvanzado=null;
     barajaExperto=[];
-    pasoCiclo=0;
+    ultimoExperto=null;
+    construirCiclo();
     pausadoManual=false;
     detenido=false;
     fallosConsecutivos=0;
