@@ -334,8 +334,8 @@
   let turno = 0;             // nivel actual en modo "por actividad"
   let ronda = 0;             // ronda actual (1, 2, 3…)
   let extrasCargadas = false;
-  let imposicionEspecial = null; // la de id 1: se usa una sola vez
-  let turnoEspecial = 0;     // actividad de la ronda 3 donde cae la especial
+  let especialesPendientes = []; // textos con id 1 sin repartir
+  let especialesRonda = {};      // { actividad: texto } de la ronda actual
   let ultimaImposicion = null; // la última que salió, para no repetirla seguida
   let transicionRonda = false; // evita que dos toques rápidos salten una ronda
   let alAceptar = null;      // qué hacer cuando se toca "Aceptar"
@@ -526,14 +526,12 @@
   }
 
   function pedirImposicion(siguiente){
+    const slot = turno + 1;
     let elegida;
-    const tocaEspecial = ronda === 3 && turnoEspecial > 0 &&
-                         (turno + 1) === turnoEspecial && imposicionEspecial;
 
-    if(tocaEspecial){
-      elegida = imposicionEspecial;
-      imposicionEspecial = null;
-      turnoEspecial = 0;
+    if(especialesRonda[slot]){
+      elegida = especialesRonda[slot];
+      delete especialesRonda[slot];
     }else{
       elegida = sortearImposicion();
     }
@@ -570,13 +568,33 @@
         if(!texto) return;
 
         if(id === 1){
-          if(!imposicionEspecial) imposicionEspecial = texto;
+          if(especialesPendientes.indexOf(texto) === -1){
+            especialesPendientes.push(texto);
+          }
         }else if(imposiciones.indexOf(texto) === -1){
           imposiciones.push(texto);
         }
       });
     }catch(e){
       // Si el archivo no está o está mal escrito, la partida sigue normal.
+    }
+  }
+
+  // Reparte las especiales en actividades distintas de la ronda.
+  function asignarEspeciales(){
+    especialesRonda = {};
+    if(especialesPendientes.length === 0) return;
+
+    const slots = [];
+    for(let i=1;i<=ARCHIVOS.length;i++) slots.push(i);
+    for(let i=slots.length-1;i>0;i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [slots[i], slots[j]] = [slots[j], slots[i]];
+    }
+
+    const cuantos = Math.min(especialesPendientes.length, slots.length);
+    for(let i=0;i<cuantos;i++){
+      especialesRonda[slots[i]] = especialesPendientes.shift();
     }
   }
 
@@ -595,11 +613,8 @@
       ronda++;
       if(ronda === 3){
         await cargarImposicionesExtra();
-        if(imposicionEspecial){
-          // Se sortea en cuál de las actividades de esta ronda aparece.
-          turnoEspecial = 1 + Math.floor(Math.random() * ARCHIVOS.length);
-        }
       }
+      asignarEspeciales();
 
       turno = 0;
       listaEl.innerHTML = "";
@@ -651,8 +666,8 @@
     ultimaPorNivel = {};
     ronda = 0;
     extrasCargadas = false;
-    imposicionEspecial = null;
-    turnoEspecial = 0;
+    especialesPendientes = [];
+    especialesRonda = {};
     ultimaImposicion = null;
     transicionRonda = false;
     modo = imposiciones.length > 0 ? modoElegido : null;
