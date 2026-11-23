@@ -84,6 +84,27 @@
     border-radius:12px; border:1px solid var(--card-border);
     background: var(--card); color:var(--fg);
   }
+  #config .campo-temas{ max-width:100%; }
+  .temas{
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+    width:100%;
+  }
+  #config .tema-chip{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.9rem; font-weight:600; letter-spacing:0;
+    width:auto; max-width:none;
+    padding:9px 16px; margin-top:0;
+    border-radius:999px;
+    background: var(--bg-2);
+    border:1px solid var(--card-border);
+    color: var(--fg-muted);
+    cursor:pointer;
+  }
+  #config .tema-chip.activo{
+    color: var(--bg);
+    background: linear-gradient(90deg, var(--coral), var(--teal));
+    border-color: transparent;
+  }
   #config button{
     font-family:'Chakra Petch', sans-serif;
     font-weight:700; letter-spacing:.06em; font-size:1.05rem;
@@ -183,9 +204,9 @@
   <div class="eyebrow">Castigos Varios en Audio</div>
   <h1>Configura la reproducción</h1>
 
-  <div class="campo">
-    <label for="tema">Tema</label>
-    <select id="tema"></select>
+  <div class="campo campo-temas">
+    <label>Temas (hasta 2)</label>
+    <div id="temas" class="temas"></div>
   </div>
 
   <div class="campo">
@@ -232,7 +253,7 @@ const SUBCARPETA_2 = "Experto";      // va uno al final de cada vuelta
 //==============================
 
 const configEl=document.getElementById("config");
-const temaSelect=document.getElementById("tema");
+const temasEl=document.getElementById("temas");
 const minutosInput=document.getElementById("minutos");
 const proporcionInput=document.getElementById("proporcion");
 const btnIniciar=document.getElementById("btnIniciar");
@@ -260,9 +281,13 @@ let ultimoExperto=null;
 let proporcion=2;   // castigos inferiores por cada experto
 let cicloFases=[];  // orden de la vuelta: P, P, A, A, E…
 let indiceCiclo=0;
+let colaUnaVez=[];  // audios 1vez, se juegan en bloque
+let bloqueHecho=false;
+let pasosCiclo=0;   // audios normales desde el inicio, para contar vueltas
 let minutosEspera=4;
-let temaActual="";
-let temaGuardado="";
+let temasElegidos=[];   // hasta 2 temas marcados
+let temasActuales=[];   // los que están sonando en esta partida
+let temasGuardados=[];
 let wakeLock=null;
 let pausadoManual=false;
 let intervalo=null;
@@ -314,7 +339,12 @@ function cargarCfg(){
         const c=JSON.parse(raw);
         if(c.minutos) minutosInput.value=c.minutos;
         if(c.proporcion) proporcionInput.value=c.proporcion;
-        if(c.tema) temaGuardado=c.tema;
+        if(Array.isArray(c.temas)){
+            temasGuardados=c.temas.slice(0,2);
+        }else if(c.tema){
+            // Compatibilidad con la versión anterior, que guardaba un solo tema.
+            temasGuardados=[c.tema];
+        }
     }catch(e){}
 }
 
@@ -323,7 +353,7 @@ function guardarCfg(){
         localStorage.setItem(CLAVE_CFG,JSON.stringify({
             minutos:minutosInput.value,
             proporcion:proporcionInput.value,
-            tema:temaSelect.value
+            temas:temasElegidos
         }));
     }catch(e){}
 }
@@ -333,7 +363,9 @@ function guardarCfg(){
 // Cada tema debe traer sus niveles (Principiante, Avanzado, Experto).
 //---------------------------------------------
 async function cargarTemas(){
-    temaSelect.innerHTML="<option value=''>Cargando temas...</option>";
+    temasEl.innerHTML="";
+    temasElegidos=[];
+
     const url="https://api.github.com/repos/"+USUARIO+"/"+REPO+"/contents/"+encodeURIComponent(CARPETA);
     const res=await fetch(url);
     if(!res.ok){
@@ -345,19 +377,54 @@ async function cargarTemas(){
         .map(item=>item.name)
         .sort((a,b)=>a.localeCompare(b,"es"));
 
-    temaSelect.innerHTML="";
     if(temas.length===0){
-        temaSelect.innerHTML="<option value=''>No hay temas</option>";
+        temasEl.textContent="No hay temas";
         return;
     }
+
     temas.forEach(nombre=>{
-        const opcion=document.createElement("option");
-        opcion.value=nombre;
-        opcion.textContent=nombre;
-        temaSelect.appendChild(opcion);
+        const boton=document.createElement("button");
+        boton.type="button";
+        boton.className="tema-chip";
+        boton.textContent=nombre;
+        boton.setAttribute("aria-pressed","false");
+
+        if(temasGuardados.includes(nombre) && temasElegidos.length<2){
+            temasElegidos.push(nombre);
+            boton.classList.add("activo");
+            boton.setAttribute("aria-pressed","true");
+        }
+
+        boton.addEventListener("click",()=>alternarTema(nombre,boton));
+        temasEl.appendChild(boton);
     });
-    if(temaGuardado && temas.includes(temaGuardado)){
-        temaSelect.value=temaGuardado;
+}
+
+function alternarTema(nombre,boton){
+    const i=temasElegidos.indexOf(nombre);
+
+    if(i>=0){
+        temasElegidos.splice(i,1);
+        boton.classList.remove("activo");
+        boton.setAttribute("aria-pressed","false");
+        configMsg.textContent="";
+        guardarCfg();
+        return;
+    }
+
+    if(temasElegidos.length>=2){
+        configMsg.textContent="Máximo 2 temas.";
+        return;
+    }
+
+    temasElegidos.push(nombre);
+    boton.classList.add("activo");
+    boton.setAttribute("aria-pressed","true");
+    configMsg.textContent="";
+    guardarCfg();
+
+    if(configMsg.textContent==="Máximo 2 temas."){
+        configMsg.textContent="";
     }
 }
 
@@ -365,7 +432,7 @@ async function iniciarTemas(){
     try{
         await cargarTemas();
     }catch(e){
-        temaSelect.innerHTML="<option value=''>No se pudieron cargar</option>";
+        temasEl.textContent="No se pudieron cargar";
         configMsg.textContent="No se pudieron cargar los temas. Recarga la página.";
     }
 }
@@ -402,17 +469,37 @@ async function listarAudiosDe(ruta){
     return lista.map(item=>({nombre:nombreVisible(item.name),url:item.download_url}));
 }
 
-async function cargarAudios(tema){
-    const raiz=CARPETA+"/"+tema;
+async function cargarAudios(temas){
+    listaPrincipiante=[];
+    listaAvanzado=[];
+    listaExperto=[];
 
-    listaPrincipiante=(await listarAudiosDe(raiz+"/"+SUBCARPETA_0))
-        .map(item=>Object.assign({},item,{categoria:"Principiante",unaVez:esUnaVez(item.nombre)}));
+    const unaVez={Principiante:[],Avanzado:[],Experto:[]};
 
-    listaAvanzado=(await listarAudiosDe(raiz+"/"+SUBCARPETA_1))
-        .map(item=>Object.assign({},item,{categoria:"Avanzado",unaVez:esUnaVez(item.nombre)}));
+    for(const tema of temas){
+        const raiz=CARPETA+"/"+tema;
 
-    listaExperto=(await listarAudiosDe(raiz+"/"+SUBCARPETA_2))
-        .map(item=>Object.assign({},item,{categoria:"Experto",unaVez:esUnaVez(item.nombre)}));
+        (await listarAudiosDe(raiz+"/"+SUBCARPETA_0)).forEach(item=>{
+            const obj=Object.assign({},item,{categoria:"Principiante",unaVez:esUnaVez(item.nombre)});
+            (obj.unaVez ? unaVez.Principiante : listaPrincipiante).push(obj);
+        });
+
+        (await listarAudiosDe(raiz+"/"+SUBCARPETA_1)).forEach(item=>{
+            const obj=Object.assign({},item,{categoria:"Avanzado",unaVez:esUnaVez(item.nombre)});
+            (obj.unaVez ? unaVez.Avanzado : listaAvanzado).push(obj);
+        });
+
+        (await listarAudiosDe(raiz+"/"+SUBCARPETA_2)).forEach(item=>{
+            const obj=Object.assign({},item,{categoria:"Experto",unaVez:esUnaVez(item.nombre)});
+            (obj.unaVez ? unaVez.Experto : listaExperto).push(obj);
+        });
+    }
+
+    // Los 1vez se guardan aparte, barajados dentro de cada nivel.
+    colaUnaVez=mezclar(unaVez.Principiante)
+        .concat(mezclar(unaVez.Avanzado))
+        .concat(mezclar(unaVez.Experto));
+    bloqueHecho=(colaUnaVez.length===0);
 }
 
 function construirCiclo(){
@@ -441,49 +528,40 @@ function mezclar(arr){
     return copia;
 }
 
-function quitarUnaVez(item, lista){
-    if(!item.unaVez) return;
-    const i=lista.findIndex(a=>a.url===item.url);
-    if(i>=0) lista.splice(i,1);
-}
-
 function sacarDeBaraja(categoria){
 
     if(categoria==="principiante"){
         if(barajaPrincipiante.length===0){
             barajaPrincipiante=mezclar(listaPrincipiante);
-            if(barajaPrincipiante.length>1 && barajaPrincipiante[0].url===ultimoPrincipiante){
+            if(barajaPrincipiante.length>1 && barajaPrincipiante[0].nombre===ultimoPrincipiante){
                 [barajaPrincipiante[0],barajaPrincipiante[1]]=[barajaPrincipiante[1],barajaPrincipiante[0]];
             }
         }
         const item=barajaPrincipiante.shift();
-        ultimoPrincipiante=item.url;
-        quitarUnaVez(item, listaPrincipiante);
+        ultimoPrincipiante=item.nombre;
         return item;
     }
 
     if(categoria==="avanzado"){
         if(barajaAvanzado.length===0){
             barajaAvanzado=mezclar(listaAvanzado);
-            if(barajaAvanzado.length>1 && barajaAvanzado[0].url===ultimoAvanzado){
+            if(barajaAvanzado.length>1 && barajaAvanzado[0].nombre===ultimoAvanzado){
                 [barajaAvanzado[0],barajaAvanzado[1]]=[barajaAvanzado[1],barajaAvanzado[0]];
             }
         }
         const item=barajaAvanzado.shift();
-        ultimoAvanzado=item.url;
-        quitarUnaVez(item, listaAvanzado);
+        ultimoAvanzado=item.nombre;
         return item;
     }
 
     if(barajaExperto.length===0){
         barajaExperto=mezclar(listaExperto);
-        if(barajaExperto.length>1 && barajaExperto[0].url===ultimoExperto){
+        if(barajaExperto.length>1 && barajaExperto[0].nombre===ultimoExperto){
             [barajaExperto[0],barajaExperto[1]]=[barajaExperto[1],barajaExperto[0]];
         }
     }
     const item=barajaExperto.shift();
-    ultimoExperto=item.url;
-    quitarUnaVez(item, listaExperto);
+    ultimoExperto=item.nombre;
     return item;
 }
 
@@ -494,6 +572,14 @@ function categoriaDisponible(categoria){
 }
 
 function siguienteAudio(){
+    // Bloque de 1vez: después de dos vueltas completas, todos seguidos.
+    if(!bloqueHecho && colaUnaVez.length>0 &&
+       (cicloFases.length===0 || pasosCiclo>=cicloFases.length*2)){
+        const item=colaUnaVez.shift();
+        if(colaUnaVez.length===0) bloqueHecho=true;
+        return item;
+    }
+
     if(cicloFases.length===0) return null;
 
     for(let i=0;i<cicloFases.length;i++){
@@ -501,6 +587,7 @@ function siguienteAudio(){
         indiceCiclo=(indiceCiclo+1)%cicloFases.length;
 
         if(categoriaDisponible(categoria)){
+            pasosCiclo++;
             return sacarDeBaraja(categoria);
         }
     }
@@ -527,7 +614,7 @@ function reproducir(item){
         fallosConsecutivos=0;
         player.className="playing";
         icono.textContent="⏸";
-        categoriaAudio.textContent=temaActual ? temaActual+" · "+(item.categoria || "") : (item.categoria || "");
+        categoriaAudio.textContent=(temasActuales.length ? temasActuales.join(" + ") + " · " : "") + (item.categoria || "");
         categoriaAudio.className="visible";
         nombre.textContent=nombreMostrar(item);
         estadoPlayer.textContent="Reproduciendo";
@@ -691,12 +778,12 @@ btnSiguiente.onclick=(e)=>{
 //---------------------------------------------
 btnIniciar.onclick=async()=>{
 
-    const tema=temaSelect.value;
+    const temas=temasElegidos.slice();
     const minutosValor=parseFloat(minutosInput.value);
     const proporcionValor=parseInt(proporcionInput.value,10);
 
-    if(!tema){
-        configMsg.textContent="Elige un tema para reproducir.";
+    if(temas.length===0){
+        configMsg.textContent="Elige al menos un tema.";
         return;
     }
 
@@ -712,21 +799,21 @@ btnIniciar.onclick=async()=>{
 
     minutosEspera=minutosValor;
     proporcion=proporcionValor;
-    temaActual=tema;
+    temasActuales=temas.slice();
     guardarCfg();
     configMsg.textContent="Cargando lista de audios...";
     btnIniciar.disabled=true;
 
     try{
-        await cargarAudios(tema);
+        await cargarAudios(temas);
     }catch(e){
         configMsg.textContent="Error al cargar los audios. Revisa tu conexión.";
         btnIniciar.disabled=false;
         return;
     }
 
-    if(listaPrincipiante.length===0 && listaAvanzado.length===0 && listaExperto.length===0){
-        configMsg.textContent="No se encontraron audios en ese tema.";
+    if(listaPrincipiante.length===0 && listaAvanzado.length===0 && listaExperto.length===0 && colaUnaVez.length===0){
+        configMsg.textContent="No se encontraron audios en esos temas.";
         btnIniciar.disabled=false;
         return;
     }
@@ -737,6 +824,7 @@ btnIniciar.onclick=async()=>{
     ultimoAvanzado=null;
     barajaExperto=[];
     ultimoExperto=null;
+    pasosCiclo=0;
     construirCiclo();
     pausadoManual=false;
     detenido=false;
