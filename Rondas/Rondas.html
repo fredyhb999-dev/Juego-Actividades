@@ -397,8 +397,9 @@ skipBtn.onclick=(e)=>{
  saltarActividad();
 };
 
-document.getElementById("game").onclick=(e)=>{
+document.body.onclick=(e)=>{
  if(juegoTerminado) return;
+ if(document.getElementById("setup").style.display!=="none") return;
  if(e.target && e.target.id==="skip") return;
  if(pausado){
    pausado=false;
