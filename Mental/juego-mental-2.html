@@ -198,7 +198,7 @@
   <p class="desc">Selecciona una o más carpetas. Se reproducirán todos los audios que contengan, en orden aleatorio.</p>
   <div id="campoTiempo">
     <label for="tiempoFrase">Segundos entre cada frase</label>
-    <input id="tiempoFrase" type="number" min="1" step="1" value="10" inputmode="numeric">
+    <input id="tiempoFrase" type="number" min="1" step="1" value="15" inputmode="numeric">
   </div>
   <div id="listaCarpetas"></div>
   <button id="btnIniciarSel" disabled>Iniciar</button>
@@ -229,7 +229,7 @@
   const BRANCH = "main";
   const BASE_FOLDER = "Mental";
   // ============================
-  let ESPERA_MS = 10 * 1000; // valor por defecto; se sobrescribe con lo que el usuario indique al inicio
+  let ESPERA_MS = 15 * 1000; // valor por defecto; se sobrescribe con lo que el usuario indique al inicio
   const tiempoFraseInput = document.getElementById("tiempoFrase");
   const btnReintentarSel = document.getElementById("btnReintentarSel");
   let FOLDERS = []; // se llena dinámicamente consultando el repositorio
@@ -254,7 +254,8 @@
     paused: false,
     stopRequested: false,
     playingAudio: false,
-    finished: false
+    finished: false,
+    loading: false
   };
 
   let wakeLock = null;
@@ -432,7 +433,10 @@
       if(state.stopRequested){ cleanup(); resolve(); return; }
 
       if(!state.paused){
-        audioEl.play().catch((e)=>{ cleanup(); reject(e); });
+        audioEl.play().catch((e)=>{
+          if(e && e.name === "AbortError") return;
+          cleanup(); reject(e);
+        });
       }
     });
   }
@@ -462,6 +466,9 @@
       showError("Las carpetas elegidas no tienen archivos .mp3");
       return;
     }
+
+    state.loading = false;
+    hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
 
     for(let fi=0; fi<plan.length; fi++){
       if(state.stopRequested) break;
@@ -511,6 +518,7 @@
     state.running = false;
     state.paused = false;
     state.finished = true;
+    state.loading = false;
     releaseWakeLock();
   }
 
@@ -526,6 +534,7 @@
     state.running = false;
     state.paused = false;
     state.finished = true;
+    state.loading = false;
     releaseWakeLock();
   }
 
@@ -535,13 +544,15 @@
     state.paused = false;
     state.stopRequested = false;
     state.finished = false;
+    state.loading = true;
     setScreenClass("playing");
-    hintEl.textContent = "Toca en cualquier momento para pausar / continuar";
+    hintEl.textContent = "Preparando...";
     await requestWakeLock();
     runGame(carpetasElegidas);
   }
 
   function togglePause(){
+    if(state.loading) return;
     state.paused = !state.paused;
     if(state.paused){
       setScreenClass("paused");
@@ -562,6 +573,7 @@
     state.paused = false;
     state.stopRequested = false;
     state.finished = false;
+    state.loading = false;
     setScreenClass("");
     faseEl.textContent = "Toca la pantalla";
     estadoEl.textContent = "para comenzar";
@@ -575,6 +587,7 @@
   }
 
   screenEl.addEventListener("click", ()=>{
+    if(state.loading) return;
     if(state.finished){
       volverASeleccion();
     }else if(state.running){
