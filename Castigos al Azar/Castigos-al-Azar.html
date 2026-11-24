@@ -21,6 +21,7 @@
     --teal: #2fd9c7;
     --coral-glow: rgba(255, 106, 92, .35);
     --teal-glow: rgba(47, 217, 199, .35);
+    --wait-glow: rgba(165, 153, 199, .35);
   }
 
   *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -45,7 +46,13 @@
     padding: max(20px, env(safe-area-inset-top)) 24px max(20px, env(safe-area-inset-bottom));
   }
 
-  #estado{ display:none; overflow-y:auto; }
+  #estado{
+    display:none; overflow-y:auto;
+    transition: box-shadow .4s ease;
+  }
+  #estado.playing{ box-shadow: inset 0 0 140px var(--teal-glow); }
+  #estado.esperando{ box-shadow: inset 0 0 140px var(--wait-glow); }
+  #estado.paused{ box-shadow: inset 0 0 140px var(--coral-glow); }
 
   .eyebrow{
     font-family:'Chakra Petch', sans-serif;
@@ -297,6 +304,7 @@ const maxInput = document.getElementById("maxMinutos");
 const botonesModo = Array.from(document.querySelectorAll(".modo"));
 
 const icono = document.querySelector(".icono-audio");
+const estadoEl = document.getElementById("estado");
 const nombreEl = document.getElementById("nombreAudio");
 const estadoPlayer = document.getElementById("estadoPlayer");
 const contador = document.getElementById("contador");
@@ -404,6 +412,7 @@ function reproducirAudio(src, nombre){
         player.play().catch(() => { if(resolveReproduccion){ resolveReproduccion(); resolveReproduccion=null; } });
         nombreEl.textContent = nombre;
         estadoPlayer.textContent = "Reproduciendo";
+        estadoEl.className = "playing";
         icono.textContent = "🔊";
         pausadoManual = false;
         reproduciendo = true;
@@ -472,6 +481,7 @@ function reproducirTexto(texto){
     return new Promise(resolve=>{
         nombreEl.textContent = texto;
         estadoPlayer.textContent = "Leyendo...";
+        estadoEl.className = "playing";
         icono.textContent = "🔊";
         pausadoManual = false;
         reproduciendo = true;
@@ -528,6 +538,7 @@ function iniciarCuenta(minutos){
     contador.className = "";
     contador.textContent = seg_a_mmss(tiempoRestante);
     estadoPlayer.textContent = "Siguiente audio en";
+    estadoEl.className = "esperando";
     pausadoManual = false;
     intervalo = setInterval(()=>{
         if(detenido){ clearInterval(intervalo); intervalo=null; if(resolveEspera){resolveEspera(); resolveEspera=null;} return; }
@@ -638,6 +649,7 @@ btnInicio.addEventListener("click", async ()=>{
     enEspera = false;
     reproduciendo = false;
     pausadoManual = false;
+    estadoEl.className = "";
 
     // Se inicia inmediatamente la reproducción.
     iniciar();
@@ -650,16 +662,19 @@ document.getElementById("estado").onclick = (e) => {
 
     if(enEspera){
         pausadoManual = !pausadoManual;
+        estadoEl.className = pausadoManual ? "paused" : "esperando";
         icono.textContent = pausadoManual ? "▶" : "⏳";
         estadoPlayer.textContent = pausadoManual ? "En pausa" : "Siguiente audio en";
     } else if(reproduciendo){
         if(modoActual === "audio"){
             if(player.paused){
                 player.play();
+                estadoEl.className = "playing";
                 icono.textContent = "🔊";
                 estadoPlayer.textContent = "Reproduciendo";
             }else{
                 player.pause();
+                estadoEl.className = "paused";
                 icono.textContent = "▶";
                 estadoPlayer.textContent = "En pausa";
             }
@@ -667,10 +682,12 @@ document.getElementById("estado").onclick = (e) => {
             if("speechSynthesis" in window){
                 if(speechSynthesis.paused){
                     speechSynthesis.resume();
+                    estadoEl.className = "playing";
                     icono.textContent = "🔊";
                     estadoPlayer.textContent = "Leyendo...";
                 }else{
                     speechSynthesis.pause();
+                    estadoEl.className = "paused";
                     icono.textContent = "▶";
                     estadoPlayer.textContent = "En pausa";
                 }

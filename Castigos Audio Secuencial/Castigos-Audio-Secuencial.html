@@ -563,12 +563,13 @@ playerEl.onclick=()=>{
         return;
     }
 
-    if(playerEl.className==="esperando"){
+    if(esperaPausada || playerEl.className==="esperando"){
         // Pausar o reanudar la cuenta regresiva.
         if(tiempoRestante<=0) return;
 
         if(esperaPausada){
             esperaPausada=false;
+            playerEl.className="esperando";
             icono.textContent="⏳";
             estadoPlayer.textContent="Siguiente en "+seg_a_mmss(tiempoRestante);
             iniciarCuenta();
@@ -576,6 +577,7 @@ playerEl.onclick=()=>{
             esperaPausada=true;
             clearInterval(intervalo);
             intervalo=null;
+            playerEl.className="paused";
             icono.textContent="▶";
             estadoPlayer.textContent="En pausa";
         }

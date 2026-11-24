@@ -23,6 +23,7 @@
     --teal: #2fd9c7;
     --coral-glow: rgba(255, 106, 92, .35);
     --teal-glow: rgba(47, 217, 199, .35);
+    --wait-glow: rgba(165, 153, 199, .35);
 }
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
@@ -41,7 +42,12 @@ body{
     min-height:100vh;
     text-align:center;
     padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    transition: box-shadow .4s ease;
 }
+
+body.marco-jugando{ box-shadow: inset 0 0 140px var(--teal-glow); }
+body.marco-esperando{ box-shadow: inset 0 0 140px var(--wait-glow); }
+body.marco-pausado{ box-shadow: inset 0 0 140px var(--coral-glow); }
 
 #app{width:100%;max-width:420px}
 
@@ -185,6 +191,13 @@ let vozTimeout = null;
 let lastSkip = 0;
 let pausado = false;
 let juegoTerminado = false;
+let vozPausada = false;
+let anuncioPendiente = null;
+
+function marco(nombre){
+    document.body.classList.remove("marco-jugando", "marco-esperando", "marco-pausado");
+    if(nombre) document.body.classList.add("marco-" + nombre);
+}
 
 async function mantenerPantallaEncendida(){
 
@@ -277,9 +290,15 @@ function buscarVozEspanol(voces){
   return voces.find(x => normal(x).startsWith("es")) || null;
 }
 
-function hablar(texto){
- if(!vozDisponible()) return;
- if(window.Sonido && !window.Sonido.activo()) return;
+function hablar(texto, alTerminar){
+ if(!vozDisponible()){
+  if(alTerminar) alTerminar();
+  return;
+ }
+ if(window.Sonido && !window.Sonido.activo()){
+  if(alTerminar) alTerminar();
+  return;
+ }
  try{
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(texto);
@@ -289,8 +308,14 @@ function hablar(texto){
   u.volume=1;
   const voz=buscarVozEspanol(speechSynthesis.getVoices());
   if(voz){ u.voice=voz; u.lang=voz.lang; }
+  if(alTerminar){
+   u.onend=alTerminar;
+   u.onerror=alTerminar;
+  }
   speechSynthesis.speak(u);
- }catch(e){}
+ }catch(e){
+  if(alTerminar) alTerminar();
+ }
 }
 
 function anunciar(texto){
@@ -298,9 +323,15 @@ function anunciar(texto){
  if(vozDisponible()){
   try{ speechSynthesis.cancel(); }catch(e){}
  }
+ const puedeSonar = vozDisponible() && !(window.Sonido && !window.Sonido.activo());
+ marco(puedeSonar ? "jugando" : "esperando");
  vozTimeout=setTimeout(()=>{
   vozTimeout=null;
-  hablar(texto);
+  if(pausado){ anuncioPendiente=texto; return; }
+  anuncioPendiente=null;
+  hablar(texto, ()=>{
+   if(!pausado && !juegoTerminado) marco("esperando");
+  });
  },400);
 }
 
@@ -311,11 +342,13 @@ function fmt(s){let m=Math.floor(s/60);let ss=s%60;return String(m).padStart(2,"
 function terminarJuego(){
  clearInterval(intv);
  intv=null;
+ juegoTerminado=true;
+ pausado=false;
+ anuncioPendiente=null;
  if(vozTimeout){ clearTimeout(vozTimeout); vozTimeout=null; }
  if(vozDisponible()){ try{ speechSynthesis.cancel(); }catch(e){} }
  skipBtn.style.display="none";
- juegoTerminado=true;
- pausado=false;
+ marco(null);
  document.getElementById("pausaMsg").style.display="none";
  document.getElementById("title").textContent="¡Juego terminado!";
  document.getElementById("timer").textContent="";
@@ -342,7 +375,7 @@ function tick(){
  rest--;
  document.getElementById("timer").textContent=fmt(Math.max(rest,0));
  if(rest===10 && estado==="actividad"){
-   hablar("Quedan 10 segundos.");
+   hablar("Quedan 10 segundos.", ()=>{ if(!pausado && !juegoTerminado) marco("esperando"); });
  }
  if(rest>0)return;
  if(estado==="actividad"){
@@ -356,6 +389,7 @@ function tick(){
    document.getElementById("title").textContent="Descanso";
    rest=30;
    document.getElementById("timer").textContent=fmt(rest);
+   marco("esperando");
  }else{
    siguienteActividad();
  }
@@ -366,7 +400,7 @@ function saltarActividad(){
  const ahora=Date.now();
  if(ahora-lastSkip<800) return;
  lastSkip=ahora;
- if(pausado){ pausado=false; document.getElementById("pausaMsg").style.display="none"; }
+ if(pausado){ pausado=false; vozPausada=false; document.getElementById("pausaMsg").style.display="none"; }
  if(actual>=total){
    beep(2);
    terminarJuego();
@@ -387,7 +421,10 @@ startBtn.onclick=()=>{
  lastSkip=0;
  pausado=false;
  juegoTerminado=false;
+ vozPausada=false;
+ anuncioPendiente=null;
  document.getElementById("pausaMsg").style.display="none";
+ marco("esperando");
  siguienteActividad();
  intv=setInterval(tick,1000);
 };
@@ -400,16 +437,32 @@ skipBtn.onclick=(e)=>{
 document.body.onclick=(e)=>{
  if(juegoTerminado) return;
  if(document.getElementById("setup").style.display!=="none") return;
- if(e.target && e.target.id==="skip") return;
+ if(e.target && e.target.closest && e.target.closest("#skip, #jv-sonido, #jv-volver")) return;
  if(pausado){
    pausado=false;
    document.getElementById("pausaMsg").style.display="none";
    if(!intv) intv=setInterval(tick,1000);
+   if(vozPausada){
+     try{ speechSynthesis.resume(); }catch(e){}
+     vozPausada=false;
+     marco("jugando");
+   }else if(anuncioPendiente){
+     const t=anuncioPendiente;
+     anuncioPendiente=null;
+     anunciar(t);
+   }else{
+     marco("esperando");
+   }
  }else{
    if(!intv) return;
    pausado=true;
    clearInterval(intv); intv=null;
    document.getElementById("pausaMsg").style.display="block";
+   vozPausada = vozDisponible() && speechSynthesis.speaking;
+   if(vozPausada){
+     try{ speechSynthesis.pause(); }catch(e){}
+   }
+   marco("pausado");
  }
 };
 
