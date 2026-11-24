@@ -90,6 +90,15 @@ h1{
     background-clip:text;
     color:transparent;
 }
+#pausaMsg{
+    color: var(--teal);
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.9rem;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    margin-top:8px;
+    display:none;
+}
 
 #round{
     font-size:.9rem;
@@ -157,6 +166,7 @@ button:disabled{ opacity:.5; cursor:default; }
 <div id="round"></div>
 <h1 id="title"></h1>
 <div id="timer"></div>
+<div id="pausaMsg" style="display:none">⏸ Pausado — toca para continuar</div>
 <button id="skip" style="display:none">⏭ Siguiente actividad</button>
 </div>
 </div>
@@ -173,6 +183,8 @@ let wakeLock = null;
 let audioCtx = null;
 let vozTimeout = null;
 let lastSkip = 0;
+let pausado = false;
+let juegoTerminado = false;
 
 async function mantenerPantallaEncendida(){
 
@@ -298,9 +310,13 @@ function fmt(s){let m=Math.floor(s/60);let ss=s%60;return String(m).padStart(2,"
 
 function terminarJuego(){
  clearInterval(intv);
+ intv=null;
  if(vozTimeout){ clearTimeout(vozTimeout); vozTimeout=null; }
  if(vozDisponible()){ try{ speechSynthesis.cancel(); }catch(e){} }
  skipBtn.style.display="none";
+ juegoTerminado=true;
+ pausado=false;
+ document.getElementById("pausaMsg").style.display="none";
  document.getElementById("title").textContent="¡Juego terminado!";
  document.getElementById("timer").textContent="";
 }
@@ -313,6 +329,8 @@ function siguienteActividad(){
  document.getElementById("title").textContent=act;
  rest=(Math.floor(Math.random()*4)+1)*60;
  estado="actividad";
+ pausado=false;
+ document.getElementById("pausaMsg").style.display="none";
  skipBtn.style.display="block";
  beep(1);
  anunciar(act);
@@ -320,6 +338,7 @@ function siguienteActividad(){
 }
 
 function tick(){
+ if(pausado) return;
  rest--;
  document.getElementById("timer").textContent=fmt(Math.max(rest,0));
  if(rest===10 && estado==="actividad"){
@@ -347,11 +366,13 @@ function saltarActividad(){
  const ahora=Date.now();
  if(ahora-lastSkip<800) return;
  lastSkip=ahora;
+ if(pausado){ pausado=false; document.getElementById("pausaMsg").style.display="none"; }
  if(actual>=total){
    beep(2);
    terminarJuego();
    return;
  }
+ if(!intv) intv=setInterval(tick,1000);
  siguienteActividad();
 }
 
@@ -364,11 +385,32 @@ startBtn.onclick=()=>{
  lista=mezclar(actividades);
  actual=0;
  lastSkip=0;
+ pausado=false;
+ juegoTerminado=false;
+ document.getElementById("pausaMsg").style.display="none";
  siguienteActividad();
  intv=setInterval(tick,1000);
 };
 
-skipBtn.onclick=saltarActividad;
+skipBtn.onclick=(e)=>{
+ e.stopPropagation();
+ saltarActividad();
+};
+
+document.getElementById("game").onclick=(e)=>{
+ if(juegoTerminado) return;
+ if(e.target && e.target.id==="skip") return;
+ if(pausado){
+   pausado=false;
+   document.getElementById("pausaMsg").style.display="none";
+   if(!intv) intv=setInterval(tick,1000);
+ }else{
+   if(!intv) return;
+   pausado=true;
+   clearInterval(intv); intv=null;
+   document.getElementById("pausaMsg").style.display="block";
+ }
+};
 
 cargarActividades();
 
