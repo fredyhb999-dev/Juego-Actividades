@@ -410,7 +410,8 @@ function saltarActividad(){
  siguienteActividad();
 }
 
-startBtn.onclick=()=>{
+startBtn.onclick=(e)=>{
+ e.stopPropagation();
  mantenerPantallaEncendida();
  if(vozDisponible()){ try{ speechSynthesis.cancel(); }catch(e){} }
  total=parseInt(document.getElementById("rounds").value)||1;

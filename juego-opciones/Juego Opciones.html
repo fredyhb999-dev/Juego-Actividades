@@ -447,9 +447,47 @@ function buscarVozEspanol(voces){
   return voces.find(x => normal(x).startsWith("es")) || null;
 }
 
+// El navegador carga la lista de voces con un pequeño retraso. Si se habla
+// antes, usa la voz por defecto (masculina). Aquí se espera a que estén listas.
+let vocesListas = false;
+let textoPendiente = null;
+
+function revisarVoces(){
+  if(!("speechSynthesis" in window)) return;
+  if(speechSynthesis.getVoices().length === 0) return;
+  vocesListas = true;
+  if(textoPendiente){
+    const t = textoPendiente;
+    textoPendiente = null;
+    hablar(t);
+  }
+}
+
+if("speechSynthesis" in window){
+  revisarVoces();
+  if(typeof speechSynthesis.addEventListener === "function"){
+    speechSynthesis.addEventListener("voiceschanged", revisarVoces);
+  }
+  setTimeout(revisarVoces, 300);
+  // Si el navegador nunca avisa, se sigue adelante con la voz por defecto.
+  setTimeout(()=>{
+    if(vocesListas) return;
+    vocesListas = true;
+    if(textoPendiente){
+      const t = textoPendiente;
+      textoPendiente = null;
+      hablar(t);
+    }
+  }, 1500);
+}
+
 function hablar(texto){
   if(!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
   if(window.Sonido && !window.Sonido.activo()) return;
+  if(!vocesListas){
+    textoPendiente = texto;
+    return;
+  }
   try{
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(texto);
