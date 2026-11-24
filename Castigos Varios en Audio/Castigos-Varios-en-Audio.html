@@ -290,6 +290,7 @@ let temasActuales=[];   // los que están sonando en esta partida
 let temasGuardados=[];
 let wakeLock=null;
 let pausadoManual=false;
+let esperaPausada=false;
 let intervalo=null;
 let tiempoRestante=0;
 let itemActual=null;
@@ -600,6 +601,7 @@ function reproducir(item){
 
     if(detenido) return;
 
+    esperaPausada=false;
     itemActual=item;
     falloContado=false;
     clearInterval(intervalo);
@@ -680,7 +682,13 @@ function programarSiguiente(minutos){
     contador.className="";
     contador.textContent=seg_a_mmss(tiempoRestante);
     estadoPlayer.textContent="Siguiente audio en";
+    esperaPausada=false;
 
+    iniciarCuenta();
+}
+
+function iniciarCuenta(){
+    clearInterval(intervalo);
     intervalo=setInterval(()=>{
         tiempoRestante--;
         if(tiempoRestante<=0){
@@ -699,6 +707,7 @@ function saltarAlSiguiente(){
     clearInterval(intervalo);
     intervalo=null;
     pausadoManual=false;
+    esperaPausada=false;
     avanzar();
 }
 
@@ -706,6 +715,7 @@ function detener(mensaje){
     detenido=true;
     clearInterval(intervalo);
     intervalo=null;
+    esperaPausada=false;
     audio.pause();
     player.className="terminado";
     icono.textContent="⏹";
@@ -719,6 +729,7 @@ function reiniciarSesion(){
     fallosConsecutivos=0;
     clearInterval(intervalo);
     intervalo=null;
+    esperaPausada=false;
     audio.pause();
     audio.removeAttribute("src");
     audio.load();
@@ -751,7 +762,22 @@ player.onclick=()=>{
     }
 
     if(player.className==="esperando"){
-        return; // mientras espera el próximo audio, no hace nada al tocar
+        // Pausar o reanudar la cuenta regresiva.
+        if(tiempoRestante<=0) return;
+
+        if(esperaPausada){
+            esperaPausada=false;
+            icono.textContent="⏳";
+            estadoPlayer.textContent="Siguiente audio en";
+            iniciarCuenta();
+        }else{
+            esperaPausada=true;
+            clearInterval(intervalo);
+            intervalo=null;
+            icono.textContent="▶";
+            estadoPlayer.textContent="En pausa";
+        }
+        return;
     }
 
     if(audio.paused){
