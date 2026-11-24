@@ -399,24 +399,24 @@ function nextRound(){
 
   document.getElementById("a").innerText = "🅰️ " + currentA;
   document.getElementById("b").innerText = "🅱️ " + currentB;
+
+  // Se leen las dos opciones en cuanto aparecen en pantalla.
+  hablar(currentA + ", o, " + currentB);
 }
 
 function pick(choice){
 
-  let eliminated, elegida;
+  let eliminated;
 
   if(choice === "a"){
     list.push(currentB);
     eliminated = currentA;
-    elegida = currentA;
   } else {
     list.push(currentA);
     eliminated = currentB;
-    elegida = currentB;
   }
 
   addHistory(eliminated);
-  hablar(elegida);
   round++;
 
   nextRound();
