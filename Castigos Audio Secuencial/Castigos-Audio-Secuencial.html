@@ -279,6 +279,7 @@ let intervalo=null;
 let tiempoRestante=0;
 let wakeLock=null;
 let pausadoManual=false;
+let esperaPausada=false;
 let terminado=false;
 
 //---------------------------------------------
@@ -415,6 +416,7 @@ function iniciarSesion(nombre, lista){
     carpetaActual=nombre;
     indiceActual=0;
     pausadoManual=false;
+    esperaPausada=false;
     terminado=false;
 
     configEl.style.display="none";
@@ -426,6 +428,7 @@ function iniciarSesion(nombre, lista){
 
 function reproducir(){
 
+    esperaPausada=false;
     const items=playlists[carpetaActual];
     const item=items[indiceActual];
 
@@ -465,8 +468,13 @@ function onAudioTerminado(){
     icono.textContent="⏳";
     estadoPlayer.textContent="Siguiente en "+tempo+" min";
     progreso.textContent="Audio "+(indiceActual+1)+" de "+items.length;
+    esperaPausada=false;
 
     tiempoRestante=tempo*60;
+    iniciarCuenta();
+}
+
+function iniciarCuenta(){
     clearInterval(intervalo);
     intervalo=setInterval(()=>{
         tiempoRestante--;
@@ -494,6 +502,7 @@ function avanzarSinEspera(){
 function terminarSesion(){
     terminado=true;
     clearInterval(intervalo);
+    esperaPausada=false;
     playerEl.className="terminado";
     icono.textContent="🏁";
     nombre.textContent=carpetaActual;
@@ -510,6 +519,7 @@ function saltarAlSiguiente(){
     clearInterval(intervalo);
     audio.pause();
     pausadoManual=false;
+    esperaPausada=false;
 
     if(indiceActual+1>=items.length){
         terminarSesion();
@@ -521,6 +531,7 @@ function saltarAlSiguiente(){
 
 function volverAlMenu(){
     clearInterval(intervalo);
+    esperaPausada=false;
     audio.pause();
     audio.removeAttribute("src");
     audio.load();
@@ -553,7 +564,22 @@ playerEl.onclick=()=>{
     }
 
     if(playerEl.className==="esperando"){
-        return; // mientras espera el próximo audio, no hace nada al tocar
+        // Pausar o reanudar la cuenta regresiva.
+        if(tiempoRestante<=0) return;
+
+        if(esperaPausada){
+            esperaPausada=false;
+            icono.textContent="⏳";
+            estadoPlayer.textContent="Siguiente en "+seg_a_mmss(tiempoRestante);
+            iniciarCuenta();
+        }else{
+            esperaPausada=true;
+            clearInterval(intervalo);
+            intervalo=null;
+            icono.textContent="▶";
+            estadoPlayer.textContent="En pausa";
+        }
+        return;
     }
 
     if(audio.paused){
