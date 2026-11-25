@@ -189,6 +189,19 @@
     transition: border-color .2s ease, color .2s ease;
   }
   #siguiente:active{ border-color: var(--teal); }
+  #extra{
+    margin-top:10px;
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.85rem; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase;
+    color: var(--coral);
+    padding:12px 20px;
+    border:1px solid var(--card-border); border-radius:12px;
+    background: var(--card);
+    cursor:pointer;
+    transition: border-color .2s ease, color .2s ease;
+  }
+  #extra:active{ border-color: var(--coral); }
   #info{
     position:absolute; bottom:max(74px, calc(env(safe-area-inset-bottom) + 40px));
     font-size:.8rem; color: var(--fg-muted); opacity:.7;
@@ -230,6 +243,7 @@
   <div id="estadoPlayer"></div>
   <div id="contador" class="hidden"></div>
   <button id="siguiente">⏭ Siguiente audio</button>
+  <button id="extra" style="display:none">🎲 Acción extra</button>
   <div id="info">
     Toca cualquier parte de la pantalla
     <br>
@@ -238,6 +252,7 @@
 </div>
 
 <audio id="audio"></audio>
+<audio id="audioExtra"></audio>
 
 <script>
 
@@ -250,6 +265,7 @@ const CARPETA = "Castigos Varios en Audio";
 const SUBCARPETA_0 = "Principiante"; // se baraja aparte
 const SUBCARPETA_1 = "Avanzado";     // se baraja aparte
 const SUBCARPETA_2 = "Experto";      // va uno al final de cada vuelta
+const SUBCARPETA_EXTRAS = "Extras";  // acción extra: botón suelto, fuera de la vuelta
 //==============================
 
 const configEl=document.getElementById("config");
@@ -266,6 +282,8 @@ const nombre=document.getElementById("nombreAudio");
 const estadoPlayer=document.getElementById("estadoPlayer");
 const contador=document.getElementById("contador");
 const btnSiguiente=document.getElementById("siguiente");
+const btnExtra=document.getElementById("extra");
+const audioExtra=document.getElementById("audioExtra");
 
 const CLAVE_CFG="audio_c4minutos_cfg";
 
@@ -297,6 +315,14 @@ let itemActual=null;
 let fallosConsecutivos=0;
 let falloContado=false;
 let detenido=false;
+
+// Acción extra
+let listaExtras=[];
+let ultimoExtra=null;
+let enExtra=false;
+let recuerdo=null;      // estado de la partida antes de entrar al extra
+let intervaloExtra=null;
+let tiempoExtra=0;
 
 const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 
@@ -474,6 +500,7 @@ async function cargarAudios(temas){
     listaPrincipiante=[];
     listaAvanzado=[];
     listaExperto=[];
+    listaExtras=[];
 
     const unaVez={Principiante:[],Avanzado:[],Experto:[]};
 
@@ -493,6 +520,10 @@ async function cargarAudios(temas){
         (await listarAudiosDe(raiz+"/"+SUBCARPETA_2)).forEach(item=>{
             const obj=Object.assign({},item,{categoria:"Experto",unaVez:esUnaVez(item.nombre)});
             (obj.unaVez ? unaVez.Experto : listaExperto).push(obj);
+        });
+
+        (await listarAudiosDe(raiz+"/"+SUBCARPETA_EXTRAS)).forEach(item=>{
+            listaExtras.push(Object.assign({},item,{categoria:"Extras"}));
         });
     }
 
@@ -711,6 +742,161 @@ function saltarAlSiguiente(){
     avanzar();
 }
 
+//---------------------------------------------
+// Acción extra: interrumpe la partida, suena un audio de Extras
+// y al terminar (o al volver) todo sigue donde estaba.
+//---------------------------------------------
+function siguienteExtra(){
+    if(listaExtras.length===0) return null;
+
+    let candidatos=listaExtras;
+    if(listaExtras.length>1){
+        candidatos=listaExtras.filter(i=>i.nombre!==ultimoExtra);
+        if(candidatos.length===0) candidatos=listaExtras;
+    }
+
+    const item=candidatos[Math.floor(Math.random()*candidatos.length)];
+    ultimoExtra=item.nombre;
+    return item;
+}
+
+function entrarEnExtra(){
+
+    if(detenido || enExtra) return;
+
+    const item=siguienteExtra();
+    if(!item) return;
+
+    // Se recuerda el punto exacto de la partida antes de congelarla.
+    let modo;
+    if(intervalo!==null) modo="espera";
+    else if(esperaPausada) modo="espera-pausa";
+    else if(!audio.paused) modo="audio";
+    else modo="audio-pausa";
+
+    recuerdo={
+        modo:modo,
+        clase:player.className,
+        icono:icono.textContent,
+        categoria:categoriaAudio.textContent,
+        claseCategoria:categoriaAudio.className,
+        nombre:nombre.textContent,
+        estado:estadoPlayer.textContent,
+        contadorTexto:contador.textContent,
+        contadorClase:contador.className,
+        tiempoRestante:tiempoRestante
+    };
+
+    enExtra=true;
+
+    clearInterval(intervalo);
+    intervalo=null;
+    clearInterval(intervaloExtra);
+    intervaloExtra=null;
+    tiempoExtra=0;
+
+    audio.pause();
+
+    btnExtra.style.display="none";
+    btnSiguiente.textContent="⏭ Volver";
+
+    audioExtra.pause();
+    audioExtra.src=item.url;
+    audioExtra.load();
+
+    audioExtra.play()
+    .then(()=>{
+        if(!enExtra) return;
+        player.className="playing";
+        icono.textContent="🎲";
+        categoriaAudio.textContent=(temasActuales.length ? temasActuales.join(" + ") + " · " : "") + "Extras";
+        categoriaAudio.className="visible";
+        nombre.textContent=nombreMostrar(item);
+        estadoPlayer.textContent="Acción extra";
+        contador.className="hidden";
+        contador.textContent="";
+    })
+    .catch(()=>{
+        salirDelExtra();
+    });
+}
+
+function continuarCuentaExtra(){
+    clearInterval(intervaloExtra);
+    intervaloExtra=setInterval(()=>{
+        tiempoExtra--;
+        if(tiempoExtra<=0){
+            clearInterval(intervaloExtra);
+            intervaloExtra=null;
+            salirDelExtra();
+        }else{
+            contador.textContent=seg_a_mmss(tiempoExtra);
+        }
+    },1000);
+}
+
+function iniciarCuentaExtra(){
+    tiempoExtra=Math.max(0,Math.round(minutosEspera*60));
+
+    player.className="esperando";
+    icono.textContent="⏳";
+    estadoPlayer.textContent="Termina la acción extra en";
+
+    if(tiempoExtra<=0){
+        salirDelExtra();
+        return;
+    }
+
+    contador.className="";
+    contador.textContent=seg_a_mmss(tiempoExtra);
+    continuarCuentaExtra();
+}
+
+function salirDelExtra(){
+
+    if(!enExtra) return;
+
+    enExtra=false;
+
+    clearInterval(intervaloExtra);
+    intervaloExtra=null;
+    tiempoExtra=0;
+
+    audioExtra.pause();
+    audioExtra.removeAttribute("src");
+    audioExtra.load();
+
+    btnSiguiente.textContent="⏭ Siguiente audio";
+    btnExtra.style.display=(listaExtras.length>0) ? "" : "none";
+
+    player.className=recuerdo.clase;
+    icono.textContent=recuerdo.icono;
+    categoriaAudio.textContent=recuerdo.categoria;
+    categoriaAudio.className=recuerdo.claseCategoria;
+    nombre.textContent=recuerdo.nombre;
+    estadoPlayer.textContent=recuerdo.estado;
+    contador.textContent=recuerdo.contadorTexto;
+    contador.className=recuerdo.contadorClase;
+
+    const antes=recuerdo;
+    recuerdo=null;
+
+    if(antes.modo==="audio"){
+        audio.play().catch(()=>falloDeAudio());
+        return;
+    }
+
+    tiempoRestante=antes.tiempoRestante;
+
+    if(antes.modo==="espera"){
+        if(tiempoRestante<=0){
+            programarSiguiente(0);
+        }else{
+            iniciarCuenta();
+        }
+    }
+}
+
 function detener(mensaje){
     detenido=true;
     clearInterval(intervalo);
@@ -721,7 +907,9 @@ function detener(mensaje){
     icono.textContent="⏹";
     contador.className="hidden";
     estadoPlayer.textContent=mensaje || "Toca para volver al menú.";
+    btnSiguiente.textContent="⏭ Siguiente audio";
     btnSiguiente.style.display="none";
+    btnExtra.style.display="none";
 }
 
 function reiniciarSesion(){
@@ -729,10 +917,20 @@ function reiniciarSesion(){
     fallosConsecutivos=0;
     clearInterval(intervalo);
     intervalo=null;
+    clearInterval(intervaloExtra);
+    intervaloExtra=null;
+    tiempoExtra=0;
+    enExtra=false;
+    recuerdo=null;
     esperaPausada=false;
     audio.pause();
     audio.removeAttribute("src");
     audio.load();
+    audioExtra.pause();
+    audioExtra.removeAttribute("src");
+    audioExtra.load();
+    btnSiguiente.textContent="⏭ Siguiente audio";
+    btnExtra.style.display="none";
     icono.textContent="⏸";
     categoriaAudio.textContent="";
     categoriaAudio.className="";
@@ -753,11 +951,54 @@ audio.onerror=()=>{
     falloDeAudio();
 };
 
+audioExtra.onended=()=>{
+    if(!enExtra) return;
+    iniciarCuentaExtra();
+};
+
+audioExtra.onerror=()=>{
+    if(!enExtra) return;
+    salirDelExtra();
+};
+
 //---------------------------------------------
 player.onclick=()=>{
 
     if(detenido){
         reiniciarSesion();
+        return;
+    }
+
+    if(enExtra){
+        // Durante el extra, la pantalla controla el extra, no la partida.
+        if(intervaloExtra!==null){
+            clearInterval(intervaloExtra);
+            intervaloExtra=null;
+            player.className="paused";
+            icono.textContent="▶";
+            estadoPlayer.textContent="Acción extra en pausa";
+            return;
+        }
+
+        if(tiempoExtra>0){
+            player.className="esperando";
+            icono.textContent="⏳";
+            estadoPlayer.textContent="Termina la acción extra en";
+            continuarCuentaExtra();
+            return;
+        }
+
+        if(audioExtra.paused){
+            audioExtra.play().catch(()=>salirDelExtra());
+            player.className="playing";
+            icono.textContent="⏸";
+            estadoPlayer.textContent="Acción extra";
+        }else{
+            audioExtra.pause();
+            player.className="paused";
+            icono.textContent="▶";
+            estadoPlayer.textContent="Acción extra en pausa";
+        }
         return;
     }
 
@@ -800,7 +1041,16 @@ player.onclick=()=>{
 
 btnSiguiente.onclick=(e)=>{
     e.stopPropagation();
+    if(enExtra){
+        salirDelExtra();
+        return;
+    }
     saltarAlSiguiente();
+};
+
+btnExtra.onclick=(e)=>{
+    e.stopPropagation();
+    entrarEnExtra();
 };
 
 //---------------------------------------------
@@ -852,6 +1102,12 @@ btnIniciar.onclick=async()=>{
     ultimoAvanzado=null;
     barajaExperto=[];
     ultimoExperto=null;
+    ultimoExtra=null;
+    enExtra=false;
+    recuerdo=null;
+    clearInterval(intervaloExtra);
+    intervaloExtra=null;
+    tiempoExtra=0;
     pasosCiclo=0;
     construirCiclo();
     pausadoManual=false;
@@ -865,6 +1121,8 @@ btnIniciar.onclick=async()=>{
     configEl.style.display="none";
     player.style.display="flex";
     player.className="";
+    btnSiguiente.textContent="⏭ Siguiente audio";
+    btnExtra.style.display=(listaExtras.length>0) ? "" : "none";
 
     avanzar();
 
