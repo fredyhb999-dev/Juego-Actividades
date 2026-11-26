@@ -1057,6 +1057,8 @@ function reiniciarSesion(){
     accionesHechas=0;
     recompensaAbierta=false;
     recompensaAccion="espera";
+    recompensaAntes=null;
+    actualizarProgreso();
     modalRecompensa.style.display="none";
     audio.pause();
     audio.removeAttribute("src");
@@ -1253,6 +1255,8 @@ btnIniciar.onclick=async()=>{
     accionesHechas=0;
     recompensaAbierta=false;
     recompensaAccion="espera";
+    recompensaAntes=null;
+    actualizarProgreso();
     modalRecompensa.style.display="none";
     pasosCiclo=0;
     construirCiclo();
