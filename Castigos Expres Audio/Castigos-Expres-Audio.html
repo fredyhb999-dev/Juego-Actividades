@@ -164,6 +164,14 @@
     background: linear-gradient(90deg, var(--coral), var(--teal));
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
+  #progreso{
+    font-family:'Chakra Petch', sans-serif;
+    font-size:.78rem; font-weight:600; letter-spacing:.14em;
+    text-transform:uppercase;
+    color: var(--fg-muted);
+    margin-top:10px;
+    font-variant-numeric: tabular-nums;
+  }
   #estadoPlayer{
     font-size:1.05rem; margin-top:14px; color: var(--fg-muted);
     font-variant-numeric: tabular-nums;
@@ -280,6 +288,7 @@
   <div id="icono">⏸</div>
   <div id="categoriaAudio"></div>
   <div id="nombreAudio"></div>
+  <div id="progreso">1 de 10</div>
   <div id="estadoPlayer"></div>
   <div id="contador" class="hidden"></div>
   <button id="siguiente">⏭ Siguiente audio</button>
@@ -329,6 +338,7 @@ const categoriaAudio=document.getElementById("categoriaAudio");
 const nombre=document.getElementById("nombreAudio");
 const estadoPlayer=document.getElementById("estadoPlayer");
 const contador=document.getElementById("contador");
+const progreso=document.getElementById("progreso");
 const btnSiguiente=document.getElementById("siguiente");
 const btnExtra=document.getElementById("extra");
 const audioExtra=document.getElementById("audioExtra");
@@ -378,6 +388,7 @@ let tiempoExtra=0;
 let accionesHechas=0;
 let recompensaAbierta=false;
 let recompensaAccion="espera";
+let recompensaAntes=null;
 
 const extensionesAudio=[".mp3",".wav",".ogg",".m4a",".aac"];
 
@@ -701,6 +712,7 @@ function reproducir(item){
     .then(()=>{
         fallosConsecutivos=0;
         accionesHechas++;
+        actualizarProgreso();
         player.className="playing";
         icono.textContent="⏸";
         categoriaAudio.textContent=(temasActuales.length ? temasActuales.join(" + ") + " · " : "") + (item.categoria || "");
@@ -789,8 +801,13 @@ function iniciarCuenta(){
     },1000);
 }
 
-function tocaRecompensa(){
-    return accionesHechas>0 && accionesHechas%10===0;
+function actualizarProgreso(){
+    const n=Math.max(1,Math.min(accionesHechas,10));
+    progreso.textContent=n+" de 10";
+}
+
+function hayRecompensa(){
+    return accionesHechas>=10;
 }
 
 function saltarAlSiguiente(){
@@ -800,7 +817,7 @@ function saltarAlSiguiente(){
     pausadoManual=false;
     esperaPausada=false;
 
-    if(tocaRecompensa()){
+    if(hayRecompensa()){
         mostrarRecompensa("avanzar");
         return;
     }
@@ -817,10 +834,6 @@ function mostrarRecompensa(accion){
     esperaPausada=false;
     audio.pause();
 
-    player.className="paused";
-    icono.textContent="▶";
-    estadoPlayer.textContent="En pausa";
-
     modalRecompensa.style.display="flex";
 }
 
@@ -830,12 +843,17 @@ btnAceptar.onclick=()=>{
     recompensaAbierta=false;
     modalRecompensa.style.display="none";
     accionesHechas=0;
+    actualizarProgreso();
 
     const accion=recompensaAccion;
     recompensaAccion="espera";
 
     if(accion==="avanzar"){
         avanzar();
+    }else if(accion==="continuar"){
+        const antes=recompensaAntes;
+        recompensaAntes=null;
+        continuarPartida(antes);
     }else{
         programarSiguiente(minutosEspera);
     }
@@ -906,6 +924,8 @@ function entrarEnExtra(){
     audioExtra.play()
     .then(()=>{
         if(!enExtra) return;
+        accionesHechas++;
+        actualizarProgreso();
         player.className="playing";
         icono.textContent="🎲";
         categoriaAudio.textContent=(temasActuales.length ? temasActuales.join(" + ") + " · " : "") + "Extras";
@@ -980,6 +1000,18 @@ function salirDelExtra(){
     const antes=recuerdo;
     recuerdo=null;
 
+    if(hayRecompensa()){
+        recompensaAntes=antes;
+        mostrarRecompensa("continuar");
+        return;
+    }
+
+    continuarPartida(antes);
+}
+
+function continuarPartida(antes){
+    if(!antes) return;
+
     if(antes.modo==="audio"){
         audio.play().catch(()=>falloDeAudio());
         return;
@@ -1047,7 +1079,7 @@ function reiniciarSesion(){
 audio.onended=()=>{
     if(pausadoManual || detenido) return;
 
-    if(tocaRecompensa()){
+    if(hayRecompensa()){
         mostrarRecompensa("espera");
         return;
     }
